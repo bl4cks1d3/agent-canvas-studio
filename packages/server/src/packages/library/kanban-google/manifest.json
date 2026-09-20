@@ -1,0 +1,81 @@
+{
+  "id": "kanban-google",
+  "name": "Kanban Google",
+  "description": "Kanban A fazer, Fazendo e Feito ligado ao Google Tasks (arraste para concluir) e ao Google Agenda, com escolha de dias e de agendas (Família). Precisa da conta Google conectada.",
+  "category": "produtividade",
+  "version": "1.0.0",
+  "requires": [],
+  "collections": [
+    {
+      "name": "kanban_google_estado",
+      "label": "Kanban Google: estado",
+      "description": "Quais tarefas do Google Tasks estão em \"Fazendo\" (o Google só guarda pendente/concluída).",
+      "fields": [
+        {
+          "name": "ref",
+          "type": "text",
+          "label": "Referência (task:<id>)",
+          "required": true
+        },
+        {
+          "name": "coluna",
+          "type": "select",
+          "label": "Coluna",
+          "options": [
+            "fazendo"
+          ]
+        }
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "key": "kanban",
+      "name": "Kanban Google (Tarefas e Agenda)",
+      "description": "Kanban A fazer / Fazendo / Feito ligado ao Google Tasks (arraste para mudar) e ao Google Agenda (compromissos se movem sozinhos pela hora).",
+      "permissions": {
+        "read": [
+          "col:kanban_google_estado"
+        ],
+        "write": [
+          "col:kanban_google_estado"
+        ],
+        "tools": [
+          "mcp__google-workspace__list_tasks",
+          "mcp__google-workspace__manage_task",
+          "mcp__google-workspace__get_events",
+          "mcp__google-workspace__list_calendars"
+        ],
+        "agents": []
+      },
+      "refreshSeconds": 120,
+      "htmlFile": "kanban.html",
+      "jsFile": "kanban.js",
+      "cssFile": "kanban.css"
+    }
+  ],
+  "canvases": [],
+  "pages": [
+    {
+      "name": "Kanban Google",
+      "layout": [
+        {
+          "kind": "heading",
+          "text": "Tarefas e compromissos (Google Tasks e Agenda)",
+          "x": 0,
+          "y": 0,
+          "w": 12,
+          "h": 1
+        },
+        {
+          "kind": "block",
+          "blockKey": "kanban",
+          "x": 0,
+          "y": 1,
+          "w": 12,
+          "h": 16
+        }
+      ]
+    }
+  ]
+}

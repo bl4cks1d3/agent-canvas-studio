@@ -30,11 +30,12 @@ const valueOf = (flag) => {
 
 if (has("--help") || has("-h")) {
   console.log(
-    "Uso: node scripts/install-mcp.mjs [--check | --remove] [--scope user|local]\n" +
+    "Uso: node scripts/install-mcp.mjs [--check | --remove] [--scope user|local] [--url http://localhost:5100]\n" +
       "  (sem opções)  registra o MCP '" + NAME + "' no Claude Code (escopo user)\n" +
       "  --check       mostra se está registrado e conectado, sem alterar nada\n" +
       "  --remove      remove o registro\n" +
-      "  --scope       user (padrão: vale em qualquer pasta) ou local (só neste projeto)"
+      "  --scope       user (padrão: vale em qualquer pasta) ou local (só neste projeto)\n" +
+      "  --url         endereço do Studio se não for http://localhost:5100 (ex.: através de um túnel SSH)"
   );
   process.exit(0);
 }
@@ -145,10 +146,11 @@ if (!existsSync(dist)) {
 }
 ok(`Servidor MCP: ${dist}`);
 
-// URLs só entram se você as definiu no ambiente (o padrão do servidor já é localhost:4000/4100/4600)
-const envArgs = ["AGENT_CANVAS_URL"]
-  .filter((k) => process.env[k])
-  .flatMap((k) => ["-e", `${k}=${process.env[k]}`]);
+// A URL do Studio só entra se você a definiu (--url ou AGENT_CANVAS_URL); o padrão do MCP é http://localhost:5100.
+// Studio em OUTRA máquina (ex.: Raspberry Pi): abra um túnel (ssh -L 5100:localhost:5100 pi@raspberrypi) e deixe o padrão,
+// ou informe --url. A API do Studio só aceita chamadas da própria máquina, por isso o túnel é o caminho seguro.
+const studioUrl = valueOf("--url") ?? process.env.AGENT_CANVAS_URL;
+const envArgs = studioUrl ? ["-e", `AGENT_CANVAS_URL=${studioUrl}`] : [];
 
 runClaude(["mcp", "remove", NAME, "-s", scope]); // idempotente: ignora se não existia
 const add = runClaude(["mcp", "add", "-s", scope, NAME, ...envArgs, "--", process.execPath, dist]);

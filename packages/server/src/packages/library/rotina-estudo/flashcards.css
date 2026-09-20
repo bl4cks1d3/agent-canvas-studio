@@ -1,0 +1,3 @@
+.fc-card { min-height: 120px; }
+.fc-texto { white-space: pre-wrap; overflow-wrap: anywhere; }
+.fc-notas { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: var(--ac-gap); }

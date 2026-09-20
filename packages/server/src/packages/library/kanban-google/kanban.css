@@ -1,0 +1,8 @@
+.kb { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: var(--ac-gap); align-items: start; min-width: 0; }
+.kb-col { min-width: 0; min-height: 180px; display: flex; flex-direction: column; gap: 8px; padding: 8px; border-radius: var(--ac-radius); background: var(--ac-hover); }
+.kb-col.over { outline: 2px dashed var(--ac-accent); }
+.kb-card { min-width: 0; overflow-wrap: anywhere; }
+.kb-card[draggable="true"] { cursor: grab; }
+.kb-card.arrastando { opacity: 0.45; }
+.kb-titulo { min-width: 160px; }
+.kb-data { width: 150px; }

@@ -57,7 +57,10 @@ export default function TerminalDock() {
       <div className="term-bar">
         {!session && (
           <>
-            <button className="btn btn-primary" disabled={noClaude || loading} onClick={() => void open("canvas")} title="Claude Code orientado a montar canvases de agentes pelo MCP">
+            <button className="btn btn-primary" disabled={noClaude || loading} onClick={() => void open("studio")} title="Claude Code com o MCP do Studio: cria dados, componentes, páginas, pacotes, tema e agentes">
+              Claude — controlar o Studio
+            </button>
+            <button className="btn" disabled={noClaude || loading} onClick={() => void open("canvas")} title="Claude Code orientado a montar canvases de agentes pelo MCP">
               Claude — montar canvases
             </button>
             <button className="btn" disabled={noClaude || loading} onClick={() => void open("claude")}>
@@ -86,7 +89,7 @@ export default function TerminalDock() {
           <TerminalPane sessionId={session.id} autoFocus />
         ) : (
           <div className="empty" style={{ color: "#9a9ca4" }}>
-            Abra o Claude Code aqui e descreva o time de agentes em português: ele desenha o canvas no editor ao lado (via MCP).
+            Abra o Claude aqui e peça em português o que quiser no Studio: dashboards, componentes, dados, pacotes ou um time de agentes. Ele cria pelo MCP e você vê aparecer na tela; componentes novos esperam a sua aprovação.
           </div>
         )}
       </div>

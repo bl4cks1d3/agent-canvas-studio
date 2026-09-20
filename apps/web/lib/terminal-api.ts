@@ -1,6 +1,6 @@
 const TERMINAL_URL = process.env.NEXT_PUBLIC_TERMINAL_URL ?? "http://127.0.0.1:5300";
 
-export type TerminalProfile = "claude" | "canvas" | "shell";
+export type TerminalProfile = "studio" | "claude" | "canvas" | "shell";
 
 export interface TerminalSession {
   id: string;

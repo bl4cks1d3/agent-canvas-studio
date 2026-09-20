@@ -1,0 +1,8 @@
+.hm { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, 14px); grid-auto-columns: minmax(8px, 1fr); gap: 3px; min-width: 0; }
+.hm i, .hm-legenda i { display: block; width: 100%; border-radius: 3px; background: var(--ac-hover); border: 1px solid var(--ac-border); }
+.hm-legenda i { width: 14px; height: 14px; }
+.hm i.l1, .hm-legenda i.l1 { background: color-mix(in srgb, var(--ac-accent) 25%, var(--ac-surface)); }
+.hm i.l2, .hm-legenda i.l2 { background: color-mix(in srgb, var(--ac-accent) 50%, var(--ac-surface)); }
+.hm i.l3, .hm-legenda i.l3 { background: color-mix(in srgb, var(--ac-accent) 75%, var(--ac-surface)); }
+.hm i.l4, .hm-legenda i.l4 { background: var(--ac-accent); }
+.hm i.fut { visibility: hidden; }

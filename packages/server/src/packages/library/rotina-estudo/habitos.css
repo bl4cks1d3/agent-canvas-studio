@@ -1,0 +1,5 @@
+.hab-nome { min-width: 140px; }
+.hab-meta { width: 72px; }
+.hab-scroll { overflow-x: auto; min-width: 0; }
+.hab-day { min-width: 30px; text-align: center; }
+.hab-bar { min-width: 70px; }

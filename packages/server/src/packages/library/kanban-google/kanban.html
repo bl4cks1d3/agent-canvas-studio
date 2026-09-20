@@ -1,0 +1,22 @@
+<div class="ac-stack">
+  <div class="ac-row-between ac-wrap">
+    <div><div class="ac-title">Tarefas e compromissos</div><div class="ac-muted" id="sub">Google Tasks e Google Agenda</div></div>
+    <div class="ac-row ac-wrap">
+      <div class="ac-tabs" id="abas">
+        <button class="ac-tab active" data-f="tudo">Tudo</button>
+        <button class="ac-tab" data-f="tarefa">Tarefas</button>
+        <button class="ac-tab" data-f="evento">Compromissos</button>
+      </div>
+      <button class="ac-btn ac-btn-sm" id="config-btn">Configurar</button>
+      <button class="ac-btn ac-btn-sm" id="recarregar">Recarregar</button>
+    </div>
+  </div>
+  <div id="config" hidden></div>
+  <form class="ac-row ac-wrap" id="nova">
+    <input class="ac-input ac-grow kb-titulo" name="titulo" placeholder="Nova tarefa no Google Tasks…" maxlength="120">
+    <input class="ac-input kb-data" name="prazo" type="date" title="Prazo (opcional)">
+    <button class="ac-btn ac-btn-primary" type="submit">Adicionar</button>
+  </form>
+  <div id="avisos"></div>
+  <div class="kb" id="quadro"></div>
+</div>

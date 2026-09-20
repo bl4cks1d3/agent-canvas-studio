@@ -6,7 +6,8 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import type { Tool as McpTool } from "@modelcontextprotocol/sdk/types.js";
 
 // Mesma convencao do .mcp.json do Claude Code: { "mcpServers": { "nome": { "command": ..., "args": [...] } } }
-export const MCP_CONFIG_PATH = resolve(__dirname, "../../../../.mcp.json");
+// AGENT_CANVAS_MCP_CONFIG troca o arquivo (testes, instalacoes com outra pasta de configuracao)
+export const MCP_CONFIG_PATH = process.env.AGENT_CANVAS_MCP_CONFIG ? resolve(process.env.AGENT_CANVAS_MCP_CONFIG) : resolve(__dirname, "../../../../.mcp.json");
 const CONFIG_PATH = MCP_CONFIG_PATH;
 
 interface McpServerConfig {

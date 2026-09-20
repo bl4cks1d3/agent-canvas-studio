@@ -1,0 +1,17 @@
+[Unit]
+Description=Agent Canvas Studio (servidor)
+After=network.target
+
+[Service]
+Type=simple
+@USERLINE@
+WorkingDirectory=@DIR@/packages/server
+Environment=NODE_ENV=production
+# Pi de 1 GB: limita o heap do Node para sobrar memoria ao sistema
+Environment=NODE_OPTIONS=--max-old-space-size=256
+ExecStart=@NODE@ @DIR@/packages/server/dist/main.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=@WANTED@

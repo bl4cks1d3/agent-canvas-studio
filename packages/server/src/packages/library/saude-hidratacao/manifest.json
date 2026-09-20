@@ -1,0 +1,83 @@
+{
+  "id": "saude-hidratacao",
+  "name": "Saúde: Hidratação",
+  "description": "Contador de água com meta diária, histórico de 7 dias e lembrete recorrente por notificação (o servidor avisa mesmo com o Studio fechado).",
+  "category": "saúde",
+  "version": "1.0.0",
+  "requires": [],
+  "collections": [
+    {
+      "name": "saude_agua",
+      "label": "Consumo de água",
+      "description": "Um registro por copo/garrafa bebido (ml, data e hora).",
+      "fields": [
+        {
+          "name": "data",
+          "type": "date",
+          "label": "Data",
+          "required": true
+        },
+        {
+          "name": "ml",
+          "type": "number",
+          "label": "Quantidade (ml)",
+          "required": true
+        },
+        {
+          "name": "hora",
+          "type": "text",
+          "label": "Hora (HH:MM)"
+        }
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "key": "agua",
+      "name": "Hidratação",
+      "description": "Contador de água com meta diária, histórico de 7 dias e lembrete recorrente por notificação.",
+      "permissions": {
+        "read": [
+          "col:saude_agua",
+          "col:sistema_lembretes"
+        ],
+        "write": [
+          "col:saude_agua",
+          "col:sistema_lembretes"
+        ],
+        "tools": [
+          "notify"
+        ],
+        "agents": []
+      },
+      "refreshSeconds": 60,
+      "htmlFile": "agua.html",
+      "jsFile": "agua.js",
+      "cssFile": "agua.css"
+    }
+  ],
+  "canvases": [],
+  "pages": [
+    {
+      "name": "Saúde",
+      "layout": [
+        {
+          "kind": "heading",
+          "text": "Hidratação",
+          "x": 0,
+          "y": 0,
+          "w": 12,
+          "h": 1
+        },
+        {
+          "kind": "block",
+          "blockKey": "agua",
+          "x": 0,
+          "y": 1,
+          "w": 7,
+          "h": 22
+        }
+      ]
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .next/
+.next-pi/
 # pasta de dados da raiz (banco, arquivos dos agentes); ancorada para nao ignorar packages/server/src/data (codigo)
 /data/
 .env
@@ -10,3 +11,6 @@ dist/
 .DS_Store
 .claude/
 apps/web/public/_harness*.html
+
+# pacote para o Raspberry Pi (gerado por pnpm pack:pi)
+/dist-pi/

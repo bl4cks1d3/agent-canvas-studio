@@ -1,0 +1,6 @@
+.ag-num { width: 100px; }
+.ag-hora { width: 116px; }
+.ag-livre { min-width: 120px; }
+.ag-atalhos { display: grid; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); gap: var(--ac-gap); }
+.ag-dia { width: 34px; }
+.ag-val { width: 60px; text-align: right; }

@@ -1,0 +1,5 @@
+.tar-titulo { min-width: 140px; }
+.tar-data { width: 150px; }
+.tar-item { display: flex; align-items: center; gap: var(--ac-gap); min-width: 0; }
+.tar-item .tar-texto { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.tar-feita .tar-texto { text-decoration: line-through; color: var(--ac-muted); }

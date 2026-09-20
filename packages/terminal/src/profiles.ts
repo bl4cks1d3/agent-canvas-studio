@@ -5,7 +5,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanEnv } from "./env.js";
 
-export const PROFILE_IDS = ["claude", "canvas", "shell"] as const;
+export const PROFILE_IDS = ["studio", "claude", "canvas", "shell"] as const;
 export type ProfileId = (typeof PROFILE_IDS)[number];
 
 export interface ProfileSpec {
@@ -56,6 +56,38 @@ const CANVAS_PROMPT =
   "Nunca execute canvases de verdade nem aprove componentes: peca ao usuario. Nao edite arquivos do projeto neste modo. " +
   "Responda sempre em portugues, de forma curta.";
 
+// Perfil "Studio": o Claude que controla a aplicacao inteira pelo MCP agent-canvas (dados, componentes, paginas, pacotes, tema e agentes).
+// Mesmas regras de escrita do texto acima: sem aspas nem metacaracteres de shell (& | < > ^ %), vai como UM argumento.
+const STUDIO_PROMPT =
+  "Modo Studio: voce e o assistente que controla o Agent Canvas Studio inteiro pelo MCP agent-canvas. O usuario pede em portugues e voce constroi: colecoes de dados e registros, componentes visuais, paginas do dashboard, pacotes da Biblioteca com save_package, tema e orquestracoes de agentes. " +
+  "Antes de criar chame studio_guide para dashboards, componentes e dados, ou canvas_guide para agentes, e siga o fluxo: corrija todos os warnings do save_block. Reaproveite o que ja existe com os list_. " +
+  "Voce pode criar de ponta a ponta: colecoes, componentes com save_block, paginas com save_page ou place_block, e bibliotecas com save_package seguido de install_package para aparecerem no Dashboard. Para componentes que usam o Google, descubra os nomes exatos das ferramentas com list_external_tools e coloque em permissions.tools. " +
+  "Regras: componentes criados por voce ficam aguardando a aprovacao do usuario, nunca aprove. Nao execute canvases de verdade, run_canvas so simula. Nao apague nada sem o usuario pedir. " +
+  "Para o Google (Agenda, Gmail e Tasks) e outros servidores conectados ao app use list_external_tools e describe_external_tool para descobrir, read_external_tool para ler e call_external_tool para alterar. A conta Google ja esta conectada: nunca peca login nem e-mail. " +
+  "Concluir tarefa no Google Tasks: call_external_tool com mcp__google-workspace__manage_task, action update, task_list_id igual a @default, o task_id da tarefa e status completed. So altere dados do Google (concluir, criar, enviar) quando o usuario pedir, e nao copie para as colecoes do Studio uma tarefa que ja existe no Google. " +
+  "Nunca leia, edite nem mostre o arquivo .env, chaves ou tokens: as chaves sao cadastradas pelo usuario na tela Configuracoes. So altere o codigo do proprio projeto se o usuario pedir. " +
+  "Responda sempre em portugues, de forma curta, e diga o que criou e o que o usuario precisa aprovar.";
+
+// Ferramentas do MCP liberadas sem perguntar a cada uso: leitura, criacao e edicao. Ficam de fora (o Claude Code pergunta): delete_* e run_canvas.
+const STUDIO_ALLOWED = [
+  "studio_guide", "canvas_guide", "canvas_nodes", "canvas_runs", "block_versions", "get_theme", "set_theme",
+  "list_collections", "list_records", "list_blocks", "get_block", "list_pages", "list_packages", "list_canvases", "get_canvas",
+  "save_collection", "save_record", "save_block", "save_page", "place_block", "save_package", "save_canvas",
+  // consulta as ferramentas externas (Google etc.); usar read_/call_external_tool continua pedindo a sua confirmacao
+  "list_external_tools", "describe_external_tool",
+  // instala o pacote que ele mesmo criou (componentes nascem sem aprovacao); uninstall_package continua pedindo confirmacao
+  "install_package",
+].map((t) => `mcp__agent-canvas__${t}`);
+
+// So o servidor agent-canvas (sem os MCPs globais do usuario, nem o do Google, que dependem de chaves): arquivo fixo, sem segredo, em data/ (fora do git).
+function studioMcpConfig(): string {
+  const file = path.join(REPO_ROOT, "data", "studio-mcp.json");
+  const config = { mcpServers: { "agent-canvas": { command: "node", args: [path.join(REPO_ROOT, "packages", "mcp", "dist", "index.js")] } } };
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, JSON.stringify(config, null, 2) + "\n", "utf8");
+  return file;
+}
+
 function claudeSpec(args: string[], title: string): ProfileSpec {
   const exe = findClaudeExe();
   if (exe) return { file: exe, args, cwd: claudeCwd(), title };
@@ -67,6 +99,8 @@ function claudeSpec(args: string[], title: string): ProfileSpec {
 // Nenhum texto vindo do navegador vira comando.
 export function resolveProfile(id: ProfileId): ProfileSpec {
   switch (id) {
+    case "studio":
+      return claudeSpec(["--append-system-prompt", STUDIO_PROMPT, "--strict-mcp-config", "--mcp-config", studioMcpConfig(), "--allowedTools", ...STUDIO_ALLOWED], "Claude · Studio");
     case "claude":
       return claudeSpec([], "Claude Code");
     case "canvas":

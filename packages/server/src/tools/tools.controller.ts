@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, ForbiddenException, Get, Post, Req } from "@nestjs/common";
+import { BadRequestException, Body, Controller, ForbiddenException, Get, Post, Query, Req } from "@nestjs/common";
 import { ToolRegistry } from "./tool-registry";
 
 interface Request {
@@ -30,6 +30,15 @@ export class ToolsController {
   list(@Req() req: Request) {
     assertLocal(req);
     return this.tools.list();
+  }
+
+  /** Esquema (JSON Schema) e descricao de UMA ferramenta, ja sem o campo da conta Google que o sistema preenche. */
+  @Get("schema")
+  schema(@Req() req: Request, @Query("name") name?: string) {
+    assertLocal(req);
+    const def = this.tools.defs([String(name ?? "")])[0];
+    if (!def) throw new BadRequestException(`ferramenta desconhecida: ${String(name ?? "")}`);
+    return def;
   }
 
   @Post("reload")

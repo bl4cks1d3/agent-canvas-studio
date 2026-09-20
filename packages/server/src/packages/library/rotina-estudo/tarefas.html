@@ -1,0 +1,19 @@
+<div class="ac-stack">
+  <div class="ac-row-between ac-wrap">
+    <div class="ac-title">Tarefas</div>
+    <div class="ac-tabs" id="abas">
+      <button class="ac-tab active" data-aba="hoje">Hoje</button>
+      <button class="ac-tab" data-aba="abertas">Abertas</button>
+      <button class="ac-tab" data-aba="feitas">Concluídas</button>
+    </div>
+  </div>
+  <form class="ac-row ac-wrap" id="novo">
+    <input class="ac-input ac-grow tar-titulo" name="titulo" placeholder="Nova tarefa…" required>
+    <input class="ac-input tar-data" name="prazo" type="date" title="Prazo">
+    <label class="ac-row ac-muted"><input type="checkbox" name="importante"> Importante</label>
+    <label class="ac-row ac-muted"><input type="checkbox" name="urgente"> Urgente</label>
+    <button class="ac-btn ac-btn-primary" type="submit">Adicionar</button>
+  </form>
+  <div id="progresso"></div>
+  <div id="lista"></div>
+</div>

@@ -1,0 +1,21 @@
+<div class="ac-stack">
+  <div class="ac-row-between ac-wrap">
+    <div><div class="ac-title">Estudo da semana</div><div class="ac-muted" id="periodo"></div></div>
+    <span class="ac-badge ac-badge-accent" id="total"></span>
+  </div>
+  <form class="ac-row ac-wrap" id="nova-materia">
+    <input class="ac-input ac-grow es-nome" name="nome" placeholder="Nova matéria (ex.: Cálculo)" required>
+    <input class="ac-input es-num" name="horas" type="number" min="0.5" step="0.5" value="4" title="Meta em horas por semana">
+    <span class="ac-muted">h/sem</span>
+    <button class="ac-btn ac-btn-primary" type="submit">Adicionar</button>
+  </form>
+  <div id="lista"></div>
+  <div class="ac-subtitle">Registrar sessão manual</div>
+  <form class="ac-row ac-wrap" id="nova-sessao">
+    <select class="ac-select es-nome" name="materia"></select>
+    <input class="ac-input es-num" name="minutos" type="number" min="1" value="30" title="Minutos">
+    <span class="ac-muted">min</span>
+    <input class="ac-input es-data" name="data" type="date">
+    <button class="ac-btn" type="submit">Registrar</button>
+  </form>
+</div>

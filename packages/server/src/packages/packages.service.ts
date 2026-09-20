@@ -319,7 +319,8 @@ export class PackagesService {
   }
 
   removeCustom(id: string) {
-    if (this.installedRow(id)) throw new BadRequestException("desinstale o pacote antes");
+    // se a biblioteca tem um pacote com o mesmo id (foi promovido a padrao de fabrica), a definicao "criada" e so uma copia velha: pode sair mesmo instalado
+    if (this.installedRow(id) && !this.lib().some((m) => m.id === id)) throw new BadRequestException("desinstale o pacote antes");
     const r = this.db.prepare(`DELETE FROM custom_packages WHERE id = ?`).run(id);
     if (Number(r.changes) === 0) throw new NotFoundException("pacote criado nao encontrado");
     return { ok: true };

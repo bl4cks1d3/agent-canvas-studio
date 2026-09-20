@@ -1,0 +1,5 @@
+.di-humores { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--ac-gap); }
+.di-humores .ac-btn { font-size: 1.6em; padding: 6px 0; }
+.di-tira { display: flex; flex-wrap: wrap; gap: 4px; }
+.di-dia { text-align: center; min-width: 38px; }
+.di-nota { overflow-wrap: anywhere; }

@@ -1,0 +1,544 @@
+{
+  "id": "rotina-estudo",
+  "name": "Rotina e Estudo",
+  "description": "Hábitos com sequência, tarefas, matriz de Eisenhower, diário de humor, mapa de constância, pomodoro, metas de estudo e flashcards com repetição espaçada.",
+  "category": "produtividade",
+  "version": "1.0.0",
+  "requires": [],
+  "collections": [
+    {
+      "name": "rotina_habitos",
+      "label": "Hábitos",
+      "description": "Hábitos acompanhados no dia a dia, com meta semanal.",
+      "fields": [
+        {
+          "name": "nome",
+          "type": "text",
+          "label": "Nome",
+          "required": true
+        },
+        {
+          "name": "categoria",
+          "type": "select",
+          "label": "Categoria",
+          "options": [
+            "saude",
+            "estudo",
+            "trabalho",
+            "mental",
+            "casa",
+            "outro"
+          ]
+        },
+        {
+          "name": "meta_semanal",
+          "type": "number",
+          "label": "Meta por semana (dias)"
+        },
+        {
+          "name": "ativo",
+          "type": "boolean",
+          "label": "Ativo"
+        }
+      ]
+    },
+    {
+      "name": "rotina_checkins",
+      "label": "Check-ins de hábitos",
+      "description": "Um registro por hábito cumprido em uma data.",
+      "fields": [
+        {
+          "name": "habito_id",
+          "type": "text",
+          "label": "Hábito (id)",
+          "required": true
+        },
+        {
+          "name": "data",
+          "type": "date",
+          "label": "Data",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "rotina_tarefas",
+      "label": "Tarefas",
+      "description": "Tarefas com importância/urgência (base da lista do dia e da matriz de Eisenhower).",
+      "fields": [
+        {
+          "name": "titulo",
+          "type": "text",
+          "label": "Título",
+          "required": true
+        },
+        {
+          "name": "importante",
+          "type": "boolean",
+          "label": "Importante"
+        },
+        {
+          "name": "urgente",
+          "type": "boolean",
+          "label": "Urgente"
+        },
+        {
+          "name": "prazo",
+          "type": "date",
+          "label": "Prazo"
+        },
+        {
+          "name": "feito",
+          "type": "boolean",
+          "label": "Concluída"
+        },
+        {
+          "name": "concluido_em",
+          "type": "date",
+          "label": "Concluída em"
+        }
+      ]
+    },
+    {
+      "name": "rotina_diario",
+      "label": "Diário e humor",
+      "description": "Um check-in por dia: humor, energia e nota.",
+      "fields": [
+        {
+          "name": "data",
+          "type": "date",
+          "label": "Data",
+          "required": true
+        },
+        {
+          "name": "humor",
+          "type": "select",
+          "label": "Humor",
+          "options": [
+            "pessimo",
+            "ruim",
+            "neutro",
+            "bom",
+            "otimo"
+          ]
+        },
+        {
+          "name": "energia",
+          "type": "number",
+          "label": "Energia (1-5)"
+        },
+        {
+          "name": "nota",
+          "type": "longtext",
+          "label": "Nota do dia"
+        }
+      ]
+    },
+    {
+      "name": "estudo_materias",
+      "label": "Matérias de estudo",
+      "description": "Matérias/temas com meta semanal de estudo em minutos.",
+      "fields": [
+        {
+          "name": "nome",
+          "type": "text",
+          "label": "Nome",
+          "required": true
+        },
+        {
+          "name": "meta_semanal_min",
+          "type": "number",
+          "label": "Meta semanal (min)"
+        }
+      ]
+    },
+    {
+      "name": "estudo_sessoes",
+      "label": "Sessões de estudo",
+      "description": "Sessões de foco/estudo (pomodoros e registros manuais).",
+      "fields": [
+        {
+          "name": "materia_id",
+          "type": "text",
+          "label": "Matéria (id)"
+        },
+        {
+          "name": "minutos",
+          "type": "number",
+          "label": "Minutos",
+          "required": true
+        },
+        {
+          "name": "data",
+          "type": "date",
+          "label": "Data",
+          "required": true
+        },
+        {
+          "name": "foco",
+          "type": "text",
+          "label": "Foco / assunto"
+        }
+      ]
+    },
+    {
+      "name": "estudo_cartoes",
+      "label": "Flashcards",
+      "description": "Cartões de revisão com repetição espaçada.",
+      "fields": [
+        {
+          "name": "frente",
+          "type": "text",
+          "label": "Pergunta",
+          "required": true
+        },
+        {
+          "name": "verso",
+          "type": "longtext",
+          "label": "Resposta",
+          "required": true
+        },
+        {
+          "name": "materia_id",
+          "type": "text",
+          "label": "Matéria (id)"
+        },
+        {
+          "name": "proxima_revisao",
+          "type": "date",
+          "label": "Próxima revisão"
+        },
+        {
+          "name": "intervalo_dias",
+          "type": "number",
+          "label": "Intervalo (dias)"
+        },
+        {
+          "name": "acertos",
+          "type": "number",
+          "label": "Acertos"
+        },
+        {
+          "name": "erros",
+          "type": "number",
+          "label": "Erros"
+        }
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "key": "habitos",
+      "name": "Rastreador de Hábitos",
+      "description": "Grade semanal de hábitos com check por dia, meta semanal e sequência (streak).",
+      "permissions": {
+        "read": [
+          "col:rotina_habitos",
+          "col:rotina_checkins"
+        ],
+        "write": [
+          "col:rotina_habitos",
+          "col:rotina_checkins"
+        ],
+        "tools": [],
+        "agents": []
+      },
+      "refreshSeconds": 0,
+      "htmlFile": "habitos.html",
+      "jsFile": "habitos.js",
+      "cssFile": "habitos.css"
+    },
+    {
+      "key": "tarefas",
+      "name": "Tarefas do Dia",
+      "description": "Lista de tarefas com prazo, importância e urgência; abas Hoje, Abertas e Concluídas.",
+      "permissions": {
+        "read": [
+          "col:rotina_tarefas"
+        ],
+        "write": [
+          "col:rotina_tarefas"
+        ],
+        "tools": [],
+        "agents": []
+      },
+      "refreshSeconds": 0,
+      "htmlFile": "tarefas.html",
+      "jsFile": "tarefas.js",
+      "cssFile": "tarefas.css"
+    },
+    {
+      "key": "matriz",
+      "name": "Matriz de Eisenhower",
+      "description": "Priorize tarefas em 4 quadrantes (urgente × importante) arrastando entre eles.",
+      "permissions": {
+        "read": [
+          "col:rotina_tarefas"
+        ],
+        "write": [
+          "col:rotina_tarefas"
+        ],
+        "tools": [],
+        "agents": []
+      },
+      "refreshSeconds": 0,
+      "htmlFile": "matriz.html",
+      "jsFile": "matriz.js",
+      "cssFile": "matriz.css"
+    },
+    {
+      "key": "diario",
+      "name": "Diário e Humor",
+      "description": "Check-in diário de humor e energia com nota e histórico dos últimos dias.",
+      "permissions": {
+        "read": [
+          "col:rotina_diario"
+        ],
+        "write": [
+          "col:rotina_diario"
+        ],
+        "tools": [],
+        "agents": []
+      },
+      "refreshSeconds": 0,
+      "htmlFile": "diario.html",
+      "jsFile": "diario.js",
+      "cssFile": "diario.css"
+    },
+    {
+      "key": "constancia",
+      "name": "Constância (Mapa de Calor)",
+      "description": "Mapa de calor das últimas 16 semanas: hábitos, estudo ou tarefas concluídas, com sequências.",
+      "permissions": {
+        "read": [
+          "col:rotina_checkins",
+          "col:estudo_sessoes",
+          "col:rotina_tarefas"
+        ],
+        "write": [],
+        "tools": [],
+        "agents": []
+      },
+      "refreshSeconds": 60,
+      "htmlFile": "constancia.html",
+      "jsFile": "constancia.js",
+      "cssFile": "constancia.css"
+    },
+    {
+      "key": "resumo",
+      "name": "Resumo do Dia",
+      "description": "KPIs do dia: hábitos, tarefas, foco, cartões a revisar, sequência e humor.",
+      "permissions": {
+        "read": [
+          "col:rotina_habitos",
+          "col:rotina_checkins",
+          "col:rotina_tarefas",
+          "col:estudo_sessoes",
+          "col:estudo_cartoes",
+          "col:rotina_diario"
+        ],
+        "write": [],
+        "tools": [],
+        "agents": []
+      },
+      "refreshSeconds": 30,
+      "htmlFile": "resumo.html",
+      "jsFile": "resumo.js",
+      "cssFile": "resumo.css"
+    },
+    {
+      "key": "pomodoro",
+      "name": "Pomodoro",
+      "description": "Temporizador de foco/pausa que registra cada pomodoro como sessão de estudo.",
+      "permissions": {
+        "read": [
+          "col:estudo_sessoes",
+          "col:estudo_materias"
+        ],
+        "write": [
+          "col:estudo_sessoes"
+        ],
+        "tools": [],
+        "agents": []
+      },
+      "refreshSeconds": 0,
+      "htmlFile": "pomodoro.html",
+      "jsFile": "pomodoro.js",
+      "cssFile": "pomodoro.css"
+    },
+    {
+      "key": "metas",
+      "name": "Metas de Estudo",
+      "description": "Meta semanal por matéria, progresso da semana e registro manual de sessões.",
+      "permissions": {
+        "read": [
+          "col:estudo_materias",
+          "col:estudo_sessoes"
+        ],
+        "write": [
+          "col:estudo_materias",
+          "col:estudo_sessoes"
+        ],
+        "tools": [],
+        "agents": []
+      },
+      "refreshSeconds": 0,
+      "htmlFile": "metas.html",
+      "jsFile": "metas.js",
+      "cssFile": "metas.css"
+    },
+    {
+      "key": "flashcards",
+      "name": "Flashcards",
+      "description": "Cartões de estudo com repetição espaçada: revise só o que vence hoje.",
+      "permissions": {
+        "read": [
+          "col:estudo_cartoes",
+          "col:estudo_materias"
+        ],
+        "write": [
+          "col:estudo_cartoes"
+        ],
+        "tools": [],
+        "agents": []
+      },
+      "refreshSeconds": 0,
+      "htmlFile": "flashcards.html",
+      "jsFile": "flashcards.js",
+      "cssFile": "flashcards.css"
+    }
+  ],
+  "canvases": [],
+  "pages": [
+    {
+      "name": "Rotina",
+      "layout": [
+        {
+          "kind": "heading",
+          "text": "Resumo do dia",
+          "x": 0,
+          "y": 0,
+          "w": 12,
+          "h": 1
+        },
+        {
+          "kind": "block",
+          "blockKey": "resumo",
+          "x": 0,
+          "y": 1,
+          "w": 12,
+          "h": 5
+        },
+        {
+          "kind": "heading",
+          "text": "Hábitos",
+          "x": 0,
+          "y": 6,
+          "w": 12,
+          "h": 1
+        },
+        {
+          "kind": "block",
+          "blockKey": "habitos",
+          "x": 0,
+          "y": 7,
+          "w": 12,
+          "h": 11
+        },
+        {
+          "kind": "heading",
+          "text": "Prioridades",
+          "x": 0,
+          "y": 18,
+          "w": 12,
+          "h": 1
+        },
+        {
+          "kind": "block",
+          "blockKey": "tarefas",
+          "x": 0,
+          "y": 19,
+          "w": 6,
+          "h": 12
+        },
+        {
+          "kind": "block",
+          "blockKey": "matriz",
+          "x": 6,
+          "y": 19,
+          "w": 6,
+          "h": 12
+        },
+        {
+          "kind": "heading",
+          "text": "Bem-estar e constância",
+          "x": 0,
+          "y": 31,
+          "w": 12,
+          "h": 1
+        },
+        {
+          "kind": "block",
+          "blockKey": "diario",
+          "x": 0,
+          "y": 32,
+          "w": 6,
+          "h": 14
+        },
+        {
+          "kind": "block",
+          "blockKey": "constancia",
+          "x": 6,
+          "y": 32,
+          "w": 6,
+          "h": 14
+        }
+      ]
+    },
+    {
+      "name": "Estudo",
+      "layout": [
+        {
+          "kind": "heading",
+          "text": "Foco e metas da semana",
+          "x": 0,
+          "y": 0,
+          "w": 12,
+          "h": 1
+        },
+        {
+          "kind": "block",
+          "blockKey": "pomodoro",
+          "x": 0,
+          "y": 1,
+          "w": 5,
+          "h": 11
+        },
+        {
+          "kind": "block",
+          "blockKey": "metas",
+          "x": 5,
+          "y": 1,
+          "w": 7,
+          "h": 11
+        },
+        {
+          "kind": "heading",
+          "text": "Revisão espaçada",
+          "x": 0,
+          "y": 12,
+          "w": 12,
+          "h": 1
+        },
+        {
+          "kind": "block",
+          "blockKey": "flashcards",
+          "x": 0,
+          "y": 13,
+          "w": 12,
+          "h": 12
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+<div class="ac-stack">
+  <div class="ac-tabs" id="modos">
+    <button class="ac-tab active" data-modo="foco">Foco</button>
+    <button class="ac-tab" data-modo="pausa">Pausa</button>
+  </div>
+  <div class="pom-tempo ac-big" id="tempo">25:00</div>
+  <div class="ac-bar"><i id="prog" style="width:0%"></i></div>
+  <div class="ac-row ac-wrap">
+    <select class="ac-select" id="materia"><option value="">Sem matéria</option></select>
+    <input class="ac-input ac-grow pom-foco" id="foco" placeholder="No que vai focar?">
+  </div>
+  <div class="ac-row ac-wrap">
+    <button class="ac-btn ac-btn-primary" id="play">Iniciar</button>
+    <button class="ac-btn" id="reset">Reiniciar</button>
+    <span class="ac-grow"></span>
+    <label class="ac-row ac-muted">Foco <input class="ac-input pom-min" id="min-foco" type="number" min="1" max="180"></label>
+    <label class="ac-row ac-muted">Pausa <input class="ac-input pom-min" id="min-pausa" type="number" min="1" max="60"></label>
+  </div>
+  <div class="ac-muted" id="hoje"></div>
+</div>

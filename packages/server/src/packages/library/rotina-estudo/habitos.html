@@ -1,0 +1,20 @@
+<div class="ac-stack">
+  <div class="ac-row-between ac-wrap">
+    <div><div class="ac-title">Hábitos</div><div class="ac-muted" id="periodo"></div></div>
+    <div class="ac-row">
+      <button class="ac-btn ac-btn-sm" data-week="-1" title="Semana anterior">‹</button>
+      <button class="ac-btn ac-btn-sm" data-week="0">Hoje</button>
+      <button class="ac-btn ac-btn-sm" data-week="1" title="Próxima semana">›</button>
+    </div>
+  </div>
+  <form class="ac-row ac-wrap" id="novo">
+    <input class="ac-input ac-grow hab-nome" name="nome" placeholder="Novo hábito (ex.: Beber 2L de água)" required>
+    <select class="ac-select" name="categoria">
+      <option value="saude">Saúde</option><option value="estudo">Estudo</option><option value="trabalho">Trabalho</option>
+      <option value="mental">Mente</option><option value="casa">Casa</option><option value="outro">Outro</option>
+    </select>
+    <input class="ac-input hab-meta" name="meta" type="number" min="1" max="7" value="7" title="Meta: dias por semana">
+    <button class="ac-btn ac-btn-primary" type="submit">Adicionar</button>
+  </form>
+  <div id="lista" class="hab-scroll"></div>
+</div>

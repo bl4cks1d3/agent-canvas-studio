@@ -1,0 +1,18 @@
+[Unit]
+Description=Agent Canvas Studio (app web)
+After=network.target agent-canvas-server.service
+
+[Service]
+Type=simple
+@USERLINE@
+WorkingDirectory=@DIR@/apps/web
+Environment=NODE_ENV=production
+Environment=NEXT_DIST_DIR=.next-pi
+Environment=NODE_OPTIONS=--max-old-space-size=384
+# so a propria maquina (use um tunel SSH para acessar de outro computador)
+ExecStart=@NODE@ @DIR@/apps/web/node_modules/next/dist/bin/next start -p 5200 -H 127.0.0.1
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=@WANTED@

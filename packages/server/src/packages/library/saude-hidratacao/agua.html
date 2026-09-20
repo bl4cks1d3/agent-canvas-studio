@@ -1,0 +1,36 @@
+<div class="ac-stack">
+  <div class="ac-row-between ac-wrap">
+    <div><div class="ac-title">Hidratação</div><div class="ac-muted" id="dia"></div></div>
+    <label class="ac-row ac-muted">Meta <input class="ac-input ag-num" id="meta" type="number" min="500" step="100"> ml</label>
+  </div>
+  <div class="ac-row-between ac-wrap"><div class="ac-big" id="total">0 ml</div><div class="ac-muted" id="pct"></div></div>
+  <div class="ac-bar"><i id="barra" style="width:0%"></i></div>
+  <div class="ag-atalhos" id="atalhos"></div>
+  <form class="ac-row ac-wrap" id="outro">
+    <input class="ac-input ac-grow ag-livre" name="ml" type="number" min="1" max="5000" placeholder="Outra quantidade (ml)">
+    <button class="ac-btn" type="submit">Adicionar</button>
+    <button class="ac-btn ac-btn-ghost" type="button" id="desfazer">Desfazer último</button>
+  </form>
+  <div class="ac-row ac-wrap" id="hoje"></div>
+  <div class="ac-subtitle">Últimos 7 dias</div>
+  <div class="ac-stack" id="semana"></div>
+  <div class="ac-card ac-stack">
+    <div class="ac-row-between">
+      <div class="ac-subtitle">Lembrete por notificação</div>
+      <label class="ac-row"><input type="checkbox" id="l-ativo"> Ativo</label>
+    </div>
+    <div class="ac-row ac-wrap">
+      <label class="ac-row ac-muted">A cada
+        <select class="ac-select" id="l-int"><option value="30">30 min</option><option value="45">45 min</option><option value="60">1 h</option><option value="90">1 h 30</option><option value="120">2 h</option></select>
+      </label>
+      <label class="ac-row ac-muted">das <input class="ac-input ag-hora" id="l-ini" type="time"></label>
+      <label class="ac-row ac-muted">às <input class="ac-input ag-hora" id="l-fim" type="time"></label>
+    </div>
+    <input class="ac-input" id="l-msg" placeholder="Mensagem do lembrete">
+    <div class="ac-row-between ac-wrap">
+      <span class="ac-muted" id="l-status"></span>
+      <button class="ac-btn ac-btn-sm" id="l-teste" type="button">Testar notificação</button>
+    </div>
+    <div class="ac-muted">Os lembretes saem do servidor, mesmo com o Studio fechado. Para receber com a aba em segundo plano, ative os avisos do navegador no sino do topo.</div>
+  </div>
+</div>

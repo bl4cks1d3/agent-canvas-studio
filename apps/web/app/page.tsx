@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import BuilderPanel from "@/components/BuilderPanel";
 import CanvasEditor from "@/components/CanvasEditor";
 import ComponentsView from "@/components/ComponentsView";
@@ -19,6 +19,8 @@ import { cancelRun, createCanvas, getCatalog, getRun, listRuns, startRun, useCan
 const ACTIVE_KEY = "agent-canvas.active";
 type View = "dashboard" | "canvas" | "library" | "components" | "data" | "settings";
 const PAGE_KEY = "agent-canvas.page";
+const TERM_OPEN_KEY = "agent-canvas.term.open";
+const TERM_HEIGHT_KEY = "agent-canvas.term.height";
 const VIEWS: Array<{ id: View; label: string; icon: string }> = [
   { id: "dashboard", label: "Dashboard", icon: "dashboard" },
   { id: "canvas", label: "Orquestração", icon: "canvas" },
@@ -44,7 +46,60 @@ export default function Page() {
     if (tokens.accent) root.setProperty("--accent", tokens.accent);
     else root.removeProperty("--accent");
   }, [tokens.accent]);
-  const [dock, setDock] = useState<"run" | "terminal" | "min">("run");
+  const [dock, setDock] = useState<"run" | "min">("run");
+  // terminal central: painel global (todas as telas), com a sessao viva mesmo fechado; Ctrl+` abre/fecha
+  const [termOpen, setTermOpen] = useState(false);
+  const [termHeight, setTermHeight] = useState(340);
+  const termHeightRef = useRef(termHeight);
+  termHeightRef.current = termHeight;
+  useEffect(() => {
+    try {
+      setTermOpen(window.localStorage.getItem(TERM_OPEN_KEY) === "1");
+      const h = Number(window.localStorage.getItem(TERM_HEIGHT_KEY));
+      if (h >= 160) setTermHeight(h);
+    } catch {
+      // sem storage: abre fechado
+    }
+  }, []);
+  const toggleTerm = useCallback(() => {
+    setTermOpen((open) => {
+      try {
+        window.localStorage.setItem(TERM_OPEN_KEY, open ? "0" : "1");
+      } catch {
+        // so nao lembra da proxima vez
+      }
+      return !open;
+    });
+  }, []);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey && (e.code === "Backquote" || e.key === "`")) {
+        e.preventDefault();
+        toggleTerm();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [toggleTerm]);
+  function startTermResize(e: ReactPointerEvent<HTMLDivElement>) {
+    e.preventDefault();
+    const el = e.currentTarget;
+    el.setPointerCapture(e.pointerId);
+    const startY = e.clientY;
+    const startH = termHeightRef.current;
+    const move = (ev: PointerEvent) => setTermHeight(Math.round(Math.min(window.innerHeight * 0.85, Math.max(160, startH + (startY - ev.clientY)))));
+    const up = () => {
+      el.removeEventListener("pointermove", move);
+      el.removeEventListener("pointerup", up);
+      try {
+        window.localStorage.setItem(TERM_HEIGHT_KEY, String(termHeightRef.current));
+      } catch {
+        // so nao lembra o tamanho
+      }
+    };
+    el.addEventListener("pointermove", move);
+    el.addEventListener("pointerup", up);
+  }
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [selectReq, setSelectReq] = useState<{ id: string; n: number } | null>(null);
@@ -186,6 +241,9 @@ export default function Page() {
             </button>
           ))}
           <span className="tab-spacer" />
+          <button className={`tab${termOpen ? " active" : ""}`} onClick={toggleTerm} title="Terminal com o Claude Code (Ctrl+`): controla o Studio inteiro, em qualquer tela">
+            <Icon name="terminal" size={14} /> Terminal
+          </button>
           <button className="tab" onClick={() => setBuilderOpen(true)} title="O Claude Code constrói dados, componentes e páginas a partir do seu pedido">
             <Icon name="agent" size={14} /> Criar com Claude
           </button>
@@ -240,9 +298,6 @@ export default function Page() {
             <button className={`dock-tab${dock === "run" ? " on" : ""}`} onClick={() => setDock("run")}>
               Execução
             </button>
-            <button className={`dock-tab${dock === "terminal" ? " on" : ""}`} onClick={() => setDock("terminal")}>
-              Terminal
-            </button>
             <span style={{ flex: 1 }} />
             <button className="dock-tab" onClick={() => setDock(dock === "min" ? "run" : "min")}>
               {dock === "min" ? "Expandir" : "Recolher"}
@@ -260,9 +315,24 @@ export default function Page() {
                 onSelectNode={(id) => setSelectReq({ id, n: Date.now() })}
               />
             </div>
-            <div style={{ height: "100%", display: dock === "terminal" ? "block" : "none" }}>
-              <TerminalDock />
-            </div>
+          </div>
+        </div>
+        <div className="gterm" style={{ display: termOpen ? undefined : "none", height: termHeight }}>
+          <div className="gterm-handle" onPointerDown={startTermResize} title="Arraste para redimensionar" />
+          <div className="gterm-bar">
+            <Icon name="terminal" size={14} />
+            <b>Terminal</b>
+            <span className="help">Claude Code com acesso ao Studio inteiro · Ctrl+` abre e fecha</span>
+            <span style={{ flex: 1 }} />
+            <button className="dock-tab" onClick={() => setTermHeight((h) => (h > 500 ? 340 : Math.round(window.innerHeight * 0.7)))}>
+              {termHeight > 500 ? "Reduzir" : "Ampliar"}
+            </button>
+            <button className="dock-tab" onClick={toggleTerm}>
+              Fechar
+            </button>
+          </div>
+          <div className="gterm-body">
+            <TerminalDock />
           </div>
         </div>
       </main>

@@ -32,7 +32,7 @@ const make = async (body) => {
 
 // ------------------------------------------------------------ catálogo
 let r = await call("GET", "/catalog");
-check("catálogo: 10 tipos de nó, ferramentas embutidas, provedores e Claude Code", r.json?.nodes?.length === 10 && r.json.tools.some((t) => t.name === "get_time") && r.json.providers.length === 3 && typeof r.json.claude.installed === "boolean", `${r.json?.nodes?.length} nós, ${r.json?.tools?.length} ferramentas, groq=${r.json?.providers?.find((p) => p.id === "groq")?.available}`);
+check("catálogo: 11 tipos de nó (com Notificar), ferramentas embutidas, provedores (3 de IA + Claude Code) e Claude Code", r.json?.nodes?.length === 11 && r.json.nodes.some((n) => n.type === "action.notify") && r.json.tools.some((t) => t.name === "get_time") && r.json.tools.some((t) => t.name === "notify") && r.json.providers.length === 4 && r.json.providers.some((p) => p.id === "claude-code") && typeof r.json.claude.installed === "boolean", `${r.json?.nodes?.length} nós, ${r.json?.tools?.length} ferramentas, groq=${r.json?.providers?.find((p) => p.id === "groq")?.available}`);
 const hasAI = r.json?.providers?.some((p) => p.available);
 
 // ------------------------------------------------------------ validação (agente = estrito)

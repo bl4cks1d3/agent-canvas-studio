@@ -258,9 +258,25 @@ const STUDIO_TOOLS: ToolDef[] = [
   },
   {
     name: "save_package",
-    description: "Salva um pacote na biblioteca (fica disponivel para o usuario instalar; NAO instala). Erros de validacao voltam para corrigir. Use quando o usuario pedir algo reutilizavel/instalavel.",
+    description: "Salva um pacote na biblioteca (NAO instala: use install_package para criar de fato colecoes, componentes e paginas). Erros de validacao voltam para corrigir. Use quando o usuario pedir algo reutilizavel/instalavel.",
     inputSchema: { type: "object", properties: { package: { type: "object", description: "manifesto completo (veja list_packages → exemplo)" } }, required: ["package"] },
     run: async (a) => api("POST", "/packages", { ...(a.package as object), source: "agent" }),
+  },
+  {
+    name: "install_package",
+    description:
+      "Instala um pacote da biblioteca: cria as colecoes (reaproveita as que ja existem, com os dados), os componentes, as paginas do dashboard e os canvases dele. Componentes de pacote criado por voce ficam AGUARDANDO a aprovacao do usuario (nunca aprove). Diga ao usuario o que instalou, as conexoes pendentes e o que ele precisa aprovar.",
+    inputSchema: { type: "object", properties: { id: { type: "string", description: "id do pacote (veja list_packages)" } }, required: ["id"] },
+    run: async (a) => {
+      const p = await api("POST", `/packages/${enc(String(a.id))}/install`);
+      return { id: p.id, nome: p.name, instalado: p.installed, pronto: p.ready, componentes: p.blockIds?.length ?? p.counts?.blocks, paginas: p.pageIds, conexoes: p.connections?.map((c: any) => `${c.label}: ${c.status}`), proximoPasso: "Peca ao usuario para aprovar os componentes (aba Componentes) e abrir a pagina no Dashboard." };
+    },
+  },
+  {
+    name: "uninstall_package",
+    description: "Desinstala um pacote (remove componentes, paginas e canvases dele; dropData=true apaga tambem as colecoes e os DADOS). So quando o usuario pedir.",
+    inputSchema: { type: "object", properties: { id: { type: "string" }, dropData: { type: "boolean" } }, required: ["id"] },
+    run: (a) => api("DELETE", `/packages/${enc(String(a.id))}?dropData=${a.dropData === true}`),
   },
   {
     name: "get_theme",
@@ -276,8 +292,83 @@ const STUDIO_TOOLS: ToolDef[] = [
   },
 ];
 
+// ---------------------------------------------------------------- ferramentas externas (servidores MCP conectados AO APP: Google Workspace etc.)
+// O Claude do terminal so enxerga este MCP. Estas ferramentas dao acesso ao que o app ja tem conectado, pela mesma camada dos agentes
+// (conta Google ja preenchida, argumentos conferidos). So ferramentas mcp__* (nunca as do proprio Studio, que ja existem acima).
+
+interface ExternalTool {
+  name: string;
+  description: string;
+  params: string[];
+  required: string[];
+  source: string;
+  readOnly: boolean;
+}
+
+async function externalTools(): Promise<ExternalTool[]> {
+  const all = (await api("GET", "/tools")) as ExternalTool[];
+  return all.filter((t) => t.name.startsWith("mcp__") && t.source.startsWith("mcp:"));
+}
+
+async function callExternal(a: Args, onlyRead: boolean): Promise<unknown> {
+  const name = String(a.name ?? "");
+  const tool = (await externalTools()).find((t) => t.name === name);
+  if (!tool) throw new Error(`ferramenta externa desconhecida: ${name}. Use list_external_tools para ver as disponiveis.`);
+  if (onlyRead && !tool.readOnly) throw new Error(`${name} altera dados (nao e so leitura): use call_external_tool, que pede a confirmacao do usuario.`);
+  const args = a.args && typeof a.args === "object" && !Array.isArray(a.args) ? (a.args as Args) : {};
+  return (await api("POST", "/tools/call", { name, args })).result;
+}
+
+const EXTERNAL_ARGS_SCHEMA = {
+  type: "object",
+  properties: {
+    name: { type: "string", description: "nome exato, ex.: mcp__google-workspace__list_tasks" },
+    args: { type: "object", description: "argumentos conforme describe_external_tool. A conta Google ja esta conectada: NAO informe user_google_email." },
+  },
+  required: ["name"],
+};
+
+const EXTERNAL_TOOLS: ToolDef[] = [
+  {
+    name: "list_external_tools",
+    description:
+      "Lista as ferramentas de servidores MCP conectados ao app (ex.: Google Workspace: Agenda, Gmail, Tasks) que voce pode usar por read_external_tool/call_external_tool. Mostra nome, descricao e se so le (somenteLeitura) ou altera dados. filter opcional: trecho do nome (ex.: task).",
+    inputSchema: { type: "object", properties: { filter: { type: "string" } } },
+    run: async (a) => {
+      const f = String(a.filter ?? "").toLowerCase();
+      return (await externalTools())
+        .filter((t) => !f || t.name.toLowerCase().includes(f))
+        .map((t) => ({ nome: t.name, somenteLeitura: t.readOnly, descricao: t.description.split("\n")[0].slice(0, 160), obrigatorios: t.required.filter((r) => r !== "user_google_email") }));
+    },
+  },
+  {
+    name: "describe_external_tool",
+    description: "Esquema (JSON Schema) e descricao completa de uma ferramenta externa: parametros, tipos e valores aceitos. Use antes de chamar.",
+    inputSchema: { type: "object", properties: { name: { type: "string" } }, required: ["name"] },
+    run: async (a) => {
+      const name = String(a.name ?? "");
+      if (!(await externalTools()).some((t) => t.name === name)) throw new Error(`ferramenta externa desconhecida: ${name}`);
+      return api("GET", `/tools/schema?name=${enc(name)}`);
+    },
+  },
+  {
+    name: "read_external_tool",
+    description: "Chama uma ferramenta externa SO DE LEITURA (listar tarefas, eventos, buscar e-mails). Recusa ferramentas que alteram dados. Devolve o texto que a ferramenta respondeu.",
+    inputSchema: EXTERNAL_ARGS_SCHEMA,
+    run: (a) => callExternal(a, true),
+  },
+  {
+    name: "call_external_tool",
+    description:
+      "Chama QUALQUER ferramenta externa, inclusive as que ALTERAM dados na conta do usuario (concluir/criar tarefa, criar evento, enviar e-mail). Use so quando o usuario pediu essa acao; o usuario confirma cada uso. Ex.: concluir tarefa no Google Tasks = mcp__google-workspace__manage_task com {action:'update', task_list_id:'@default', task_id, status:'completed'}.",
+    inputSchema: EXTERNAL_ARGS_SCHEMA,
+    run: (a) => callExternal(a, false),
+  },
+];
+
 const TOOLS: ToolDef[] = [
   ...STUDIO_TOOLS,
+  ...EXTERNAL_TOOLS,
   {
     name: "canvas_guide",
     description: "Guia completo do Agent Canvas (nos, expressoes, padroes de times de agentes). Leia antes de montar.",

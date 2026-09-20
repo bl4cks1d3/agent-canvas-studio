@@ -16,7 +16,13 @@
     "mcp:install": "node scripts/install-mcp.mjs",
     "test": "node scripts/test-api.mjs && node scripts/test-studio.mjs",
     "test:api": "node scripts/test-api.mjs",
-    "test:studio": "node scripts/test-studio.mjs"
+    "test:studio": "node scripts/test-studio.mjs",
+    "setup": "node scripts/install.mjs",
+    "install:claude": "node scripts/install-mcp.mjs",
+    "factory:restore": "node scripts/factory-restore.mjs",
+    "export:package": "node scripts/export-package.mjs",
+    "pack:pi": "node scripts/pi/pack.mjs",
+    "test:factory": "node scripts/test-factory.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",

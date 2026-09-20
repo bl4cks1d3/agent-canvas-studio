@@ -300,6 +300,14 @@ try {
     check("google: testar sem servidor conectado -> 400", r.status === 400, msg(r));
   }
 
+  // ------------------------------------------------------------ padrao de fabrica (so leitura: a instalacao em banco vazio esta em scripts/test-factory.mjs)
+  r = await call("GET", "/factory");
+  check("fabrica: status lista os pacotes do padrao, todos disponiveis na biblioteca", r.status === 200 && r.json?.packages?.length >= 5 && r.json.packages.every((p) => p.available === true), JSON.stringify(r.json?.packages?.filter((p) => !p.available)));
+  const lib = (await call("GET", "/packages")).json ?? [];
+  check("fabrica: cada pacote de fabrica e da biblioteca (nao um 'criado' duplicado)", r.json.packages.every((f) => lib.filter((p) => p.id === f.id).length === 1 && lib.find((p) => p.id === f.id).origin === "biblioteca"), JSON.stringify(lib.filter((p) => p.origin === "criado").map((p) => p.id)));
+  const semAgente = (await call("GET", "/blocks")).json.filter((b) => b.packageId && r.json.packages.some((f) => f.id === b.packageId));
+  check("fabrica: componentes instalados de pacotes de biblioteca nascem aprovados", semAgente.every((b) => b.approved === true || b.source !== "package"), semAgente.filter((b) => !b.approved).map((b) => b.name).join(", "));
+
   // ------------------------------------------------------------ provedores de IA (so validacoes e leitura: nao grava chave nem modelo no .env)
   r = await call("GET", "/integrations/ai");
   check("ia: status lista os provedores e o Claude Code", r.status === 200 && r.json?.providers?.length === 3 && typeof r.json?.claude?.installed === "boolean" && ["auto", "groq", "gemini", "anthropic"].includes(r.json?.preferred), msg(r));

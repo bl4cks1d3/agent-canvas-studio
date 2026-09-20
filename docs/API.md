@@ -37,6 +37,9 @@ Tema: `GET/PUT /theme`.
 ## Conta Google (botão "Conectar conta Google" da Biblioteca)
 `GET /integrations/google` (estado: uv, chaves salvas, servidor conectado, ferramentas ligadas ao pacote; nunca devolve segredo), `POST /integrations/google/setup {email, clientId?, clientSecret?}` (grava `GOOGLE_OAUTH_CLIENT_ID/SECRET` e `USER_GOOGLE_EMAIL` no `.env`, declara `google-workspace` no `.mcp.json` com `uvx workspace-mcp`, reconecta e liga as ferramentas ao pacote; sem client id/secret reaproveita os salvos), `POST /integrations/google/refresh`, `POST /integrations/google/authorize` (devolve o link de login do Google, só `accounts.google.com`), `POST /integrations/google/test` (lê a agenda: `ok` ou `needsAuth`), `DELETE /integrations/google` (remove do `.mcp.json` e apaga as chaves do `.env`). Só a própria máquina/Studio. Nas chamadas MCP, `user_google_email` é preenchido com o e-mail salvo quando a ferramenta o exige e quem chamou não mandou.
 
+## Padrão de fábrica
+`GET /factory` (pacotes de fábrica: disponível na biblioteca? instalado? banco vazio? já instalou?), `POST /factory/restore` (instala os que faltam; não altera nada já instalado; só a própria máquina). Numa subida com o banco **vazio** o servidor instala o padrão sozinho uma vez (`AGENT_CANVAS_NO_FACTORY=1` desliga). Lista em `FACTORY_PACKAGES` (`packages/server/src/packages/factory.service.ts`). A API escuta em `SERVER_HOST` (padrão `127.0.0.1`).
+
 ## Ferramentas e construtor
 `GET /tools`, `POST /tools/call {name, args}`, `POST /tools/reload` (relê o `.mcp.json` e reconecta os servidores MCP);
 `GET /builder/status`, `GET /builder/runs`, `POST /builder/runs {prompt, pageId?}`, `GET /builder/runs/:id`, `POST /builder/runs/:id/cancel`.
