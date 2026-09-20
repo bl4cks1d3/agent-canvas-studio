@@ -1,0 +1,10 @@
+[hidden] { display: none !important; }
+.bar { margin-bottom: 10px; }
+.tablewrap { overflow-x: auto; }
+.ac-table td { vertical-align: middle; }
+.ac-table td small { display: block; color: var(--ac-muted); }
+.ac-table td small.ac-danger { color: var(--ac-danger); }
+.estoque { white-space: nowrap; }
+.estoque .ac-badge { display: inline-block; min-width: 34px; text-align: center; margin: 0 4px; }
+.acoes { white-space: nowrap; text-align: right; }
+.acoes .ac-btn { margin-left: 4px; }

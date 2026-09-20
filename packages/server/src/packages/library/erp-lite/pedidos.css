@@ -1,0 +1,8 @@
+[hidden] { display: none !important; }
+.bar { margin-bottom: 10px; }
+.tablewrap { overflow-x: auto; }
+.ac-table td { vertical-align: middle; }
+.ac-table td.num { white-space: nowrap; }
+.ac-table tr.cancelado td:not(:last-child):not(:nth-last-child(2)) { opacity: .55; text-decoration: line-through; }
+.acoes { white-space: nowrap; text-align: right; }
+.soma { margin-top: 8px; text-align: right; }

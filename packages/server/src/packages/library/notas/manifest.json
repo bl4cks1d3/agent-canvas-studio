@@ -1,0 +1,163 @@
+{
+  "id": "notas",
+  "name": "Notas",
+  "description": "Caderno de notas com busca, tags, notas fixadas e editor com salvamento explícito. Um agente resume a nota ou extrai as ações.",
+  "category": "produtividade",
+  "version": "1.0.0",
+  "requires": [
+    {
+      "id": "notas",
+      "kind": "collection",
+      "label": "Coleção notas_itens (criada na instalação)",
+      "collection": "notas_itens"
+    },
+    {
+      "id": "ia",
+      "kind": "ai",
+      "label": "Provedor de IA (para o botão “Resumir com IA”)",
+      "optional": true
+    }
+  ],
+  "collections": [
+    {
+      "name": "notas_itens",
+      "label": "Notas",
+      "description": "Cada nota do caderno.",
+      "fields": [
+        { "name": "titulo", "label": "Título", "type": "text", "required": true },
+        { "name": "corpo", "label": "Texto", "type": "longtext" },
+        { "name": "tags", "label": "Tags (separadas por vírgula)", "type": "text" },
+        { "name": "fixada", "label": "Fixada", "type": "boolean" }
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "key": "editor",
+      "name": "Notas: caderno",
+      "description": "Lista com busca e filtro por tag, e editor com salvar explícito e resumo por IA.",
+      "htmlFile": "editor.html",
+      "cssFile": "editor.css",
+      "jsFile": "editor.js",
+      "refreshSeconds": 30,
+      "permissions": {
+        "read": ["col:notas_itens"],
+        "write": ["col:notas_itens"],
+        "tools": [],
+        "agents": ["resumir"]
+      }
+    },
+    {
+      "key": "resumo",
+      "name": "Notas: fixadas e recentes",
+      "description": "Totais, notas fixadas e as últimas notas alteradas.",
+      "htmlFile": "resumo.html",
+      "cssFile": "resumo.css",
+      "jsFile": "resumo.js",
+      "refreshSeconds": 30,
+      "permissions": {
+        "read": ["col:notas_itens"],
+        "write": [],
+        "tools": [],
+        "agents": []
+      }
+    }
+  ],
+  "canvases": [
+    {
+      "key": "resumir",
+      "name": "Notas: resumir",
+      "description": "Resume uma nota e extrai os itens de ação (o botão “Resumir com IA” do caderno executa este canvas).",
+      "nodes": [
+        {
+          "id": "nota",
+          "type": "input.prompt",
+          "name": "Texto da nota",
+          "x": 0,
+          "y": 60,
+          "config": {
+            "text": "Título: Reunião semanal\n\nBruno vai revisar o orçamento até quarta. Carla envia a proposta ao cliente. Ana agenda a demonstração com o time comercial."
+          }
+        },
+        {
+          "id": "resumidor",
+          "type": "agent.llm",
+          "name": "Resumidor",
+          "x": 320,
+          "y": 40,
+          "config": {
+            "provider": "auto",
+            "instructions": "Você recebe o texto de uma nota pessoal (a primeira linha traz o título). Responda em português do Brasil, em texto simples, sem markdown (nada de asteriscos ou #), neste formato: primeiro a linha \"Resumo:\" seguida de 2 a 5 tópicos curtos iniciados por \"- \" com as ideias principais; depois a linha \"Ações:\" seguida de um tópico \"- \" para cada tarefa ou compromisso que aparece no texto (verbo no imperativo, com responsável e prazo quando estiverem escritos). Se não houver nenhuma ação, escreva \"Ações:\" e \"- Nenhuma ação identificada.\". Não invente informações que não estejam na nota. Se o texto for muito curto, resuma em uma frase.",
+            "tools": [],
+            "maxSteps": 3
+          }
+        },
+        {
+          "id": "resultado",
+          "type": "output.result",
+          "name": "Resumo e ações",
+          "x": 660,
+          "y": 60,
+          "config": {
+            "title": "Resumo e ações"
+          }
+        }
+      ],
+      "edges": [
+        { "id": "nota_main_resumidor", "from": "nota", "fromPort": "main", "to": "resumidor" },
+        { "id": "resumidor_main_resultado", "from": "resumidor", "fromPort": "main", "to": "resultado" }
+      ]
+    }
+  ],
+  "seed": {
+    "notas_itens": [
+      {
+        "titulo": "Ideias para o lançamento",
+        "corpo": "- Vídeo curto mostrando o painel em uso\n- Convidar 10 clientes para testar antes do lançamento\n- Página de espera com lista de e-mails\n- Definir o preço de lançamento até sexta\n- Pedir depoimento em vídeo para os primeiros clientes",
+        "tags": "produto, ideias",
+        "fixada": true
+      },
+      {
+        "titulo": "Reunião semanal — 15/09",
+        "corpo": "Participantes: Ana, Bruno e Carla.\n\nPontos discutidos:\n- Bruno vai revisar o orçamento do trimestre até quarta-feira.\n- Carla precisa enviar a proposta para o cliente Lumen Estúdio.\n- Ana ficou de agendar a demonstração com o time comercial.\n- O relatório de vendas de agosto está atrasado.\n\nPróxima reunião: 22/09, às 10h.",
+        "tags": "reuniao, trabalho",
+        "fixada": false
+      },
+      {
+        "titulo": "Lista de compras",
+        "corpo": "Café\nLeite\nOvos\nTomate\nAzeite\nPão integral\nDetergente\nPapel higiênico",
+        "tags": "pessoal",
+        "fixada": true
+      },
+      {
+        "titulo": "Anotações do livro sobre hábitos",
+        "corpo": "A ideia central: pequenas melhorias diárias se acumulam e mudam o resultado no longo prazo.\n\nTrês pontos para lembrar:\n1. Foque no sistema, não só na meta.\n2. Facilite o começo: reduza o atrito do hábito que você quer criar.\n3. Registre o progresso; ver a sequência motiva a continuar.\n\nPara testar: caminhar 10 minutos logo depois do café.",
+        "tags": "leitura, estudo",
+        "fixada": false
+      },
+      {
+        "titulo": "Checklist de viagem",
+        "corpo": "- Documentos e cartão do plano de saúde\n- Carregador e adaptador de tomada\n- Reservar o transfer do aeroporto\n- Baixar os mapas offline\n- Avisar o banco sobre a viagem",
+        "tags": "pessoal, viagem",
+        "fixada": false
+      },
+      {
+        "titulo": "Rascunho do post do blog",
+        "corpo": "Título provisório: Como organizar a semana em 15 minutos.\n\nEstrutura: problema (listas que nunca terminam), método (três blocos por dia), exemplo prático e um modelo para baixar.\n\nFalta: escrever a introdução e escolher a imagem de capa.",
+        "tags": "trabalho, escrita",
+        "fixada": false
+      }
+    ]
+  },
+  "pages": [
+    {
+      "name": "Notas",
+      "layout": [
+        { "kind": "heading", "text": "Caderno", "x": 0, "y": 0, "w": 8, "h": 1 },
+        { "kind": "heading", "text": "Fixadas e recentes", "x": 8, "y": 0, "w": 4, "h": 1 },
+        { "blockKey": "editor", "x": 0, "y": 1, "w": 8, "h": 16 },
+        { "blockKey": "resumo", "x": 8, "y": 1, "w": 4, "h": 16 }
+      ]
+    }
+  ]
+}

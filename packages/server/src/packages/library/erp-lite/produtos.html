@@ -1,0 +1,17 @@
+<div class="ac-row ac-row-between ac-wrap bar">
+  <div class="ac-row ac-wrap">
+    <input id="q" class="ac-input" placeholder="Buscar produto ou SKU…" style="max-width:240px">
+    <label class="ac-row"><input id="baixo" type="checkbox"> Só abaixo do mínimo</label>
+  </div>
+  <div class="ac-row ac-wrap">
+    <button id="ia" class="ac-btn" title="Um agente lê produtos e pedidos e propõe o que comprar">Sugerir reposição (IA)</button>
+    <button id="add" class="ac-btn ac-btn-primary">+ Produto</button>
+  </div>
+</div>
+<div class="tablewrap">
+  <table class="ac-table">
+    <thead><tr><th>Produto</th><th>Preço</th><th>Estoque</th><th>Mínimo</th><th></th></tr></thead>
+    <tbody id="linhas"></tbody>
+  </table>
+</div>
+<div id="vazio" class="ac-empty" hidden></div>

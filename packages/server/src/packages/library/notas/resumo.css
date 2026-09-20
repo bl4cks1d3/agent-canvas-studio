@@ -1,0 +1,6 @@
+.entrada { border-bottom: 1px solid var(--ac-border); padding: 7px 0; }
+.entrada:last-child { border-bottom: 0; }
+.entrada b { display: block; overflow-wrap: anywhere; }
+.entrada small { display: block; color: var(--ac-muted); overflow-wrap: anywhere; }
+.entrada .meta { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+.secao { margin-top: 12px; }

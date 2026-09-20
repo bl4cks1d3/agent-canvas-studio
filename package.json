@@ -1,0 +1,34 @@
+{
+  "name": "agent-canvas",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Agent Canvas Studio - dashboards personalizados construidos pelo Claude, com dados persistentes e agentes conectados",
+  "packageManager": "pnpm@10.28.2",
+  "scripts": {
+    "dev": "pnpm --filter @agent-canvas/shared --filter @agent-canvas/mcp build && concurrently -n shared,server,web,terminal -c gray,blue,magenta,cyan \"pnpm dev:shared\" \"pnpm dev:server\" \"pnpm dev:web\" \"pnpm dev:terminal\"",
+    "dev:shared": "pnpm --filter @agent-canvas/shared dev",
+    "dev:server": "pnpm --filter @agent-canvas/server dev",
+    "dev:web": "pnpm --filter @agent-canvas/web dev",
+    "dev:terminal": "pnpm --filter @agent-canvas/terminal dev",
+    "build": "pnpm -r build",
+    "build:mcp": "pnpm --filter @agent-canvas/shared --filter @agent-canvas/mcp build",
+    "typecheck": "pnpm -r typecheck",
+    "mcp:install": "node scripts/install-mcp.mjs",
+    "test": "node scripts/test-api.mjs && node scripts/test-studio.mjs",
+    "test:api": "node scripts/test-api.mjs",
+    "test:studio": "node scripts/test-studio.mjs"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@nestjs/core",
+      "esbuild"
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.next/
+# pasta de dados da raiz (banco, arquivos dos agentes); ancorada para nao ignorar packages/server/src/data (codigo)
+/data/
+.env
+*.db
+*.log
+*.tsbuildinfo
+.DS_Store
+.claude/
+apps/web/public/_harness*.html

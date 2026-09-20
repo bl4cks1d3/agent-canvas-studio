@@ -1,0 +1,196 @@
+{
+  "id": "crm",
+  "name": "CRM",
+  "description": "Funil de vendas com arrastar-e-soltar, base de contatos e indicadores. Um analista de IA sugere os próximos follow-ups.",
+  "category": "vendas",
+  "version": "1.0.0",
+  "requires": [
+    {
+      "id": "negocios",
+      "kind": "collection",
+      "label": "Coleção crm_negocios (criada na instalação)",
+      "collection": "crm_negocios"
+    },
+    {
+      "id": "contatos",
+      "kind": "collection",
+      "label": "Coleção crm_contatos (criada na instalação)",
+      "collection": "crm_contatos"
+    },
+    {
+      "id": "ia",
+      "kind": "ai",
+      "label": "Provedor de IA (para o botão “Perguntar à IA”)",
+      "optional": true
+    }
+  ],
+  "collections": [
+    {
+      "name": "crm_contatos",
+      "label": "Contatos do CRM",
+      "description": "Pessoas e empresas com quem você negocia.",
+      "fields": [
+        { "name": "nome", "label": "Nome", "type": "text", "required": true },
+        { "name": "empresa", "label": "Empresa", "type": "text" },
+        { "name": "email", "label": "E-mail", "type": "text" },
+        { "name": "telefone", "label": "Telefone", "type": "text" },
+        {
+          "name": "origem",
+          "label": "Origem",
+          "type": "select",
+          "options": ["indicacao", "site", "evento", "redes-sociais", "prospeccao", "outro"]
+        },
+        { "name": "notas", "label": "Notas", "type": "longtext" }
+      ]
+    },
+    {
+      "name": "crm_negocios",
+      "label": "Negócios do CRM",
+      "description": "Cada oportunidade de venda; a etapa define a coluna do funil.",
+      "fields": [
+        { "name": "titulo", "label": "Título", "type": "text", "required": true },
+        { "name": "contato", "label": "Contato (nome)", "type": "text" },
+        { "name": "valor", "label": "Valor (R$)", "type": "number" },
+        {
+          "name": "etapa",
+          "label": "Etapa",
+          "type": "select",
+          "options": ["lead", "contato", "proposta", "negociacao", "ganho", "perdido"]
+        },
+        { "name": "fechamento", "label": "Fechamento previsto", "type": "date" },
+        { "name": "notas", "label": "Notas", "type": "longtext" }
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "key": "kpis",
+      "name": "CRM: indicadores",
+      "description": "Valor em aberto, valor ganho, taxa de conversão e negócios por etapa.",
+      "htmlFile": "kpis.html",
+      "cssFile": "kpis.css",
+      "jsFile": "kpis.js",
+      "refreshSeconds": 30,
+      "permissions": {
+        "read": ["col:crm_negocios", "col:crm_contatos"],
+        "write": [],
+        "tools": [],
+        "agents": []
+      }
+    },
+    {
+      "key": "funil",
+      "name": "CRM: funil de negócios",
+      "description": "Negócios por etapa com arrastar-e-soltar, totais por coluna e pergunta à IA.",
+      "htmlFile": "funil.html",
+      "cssFile": "funil.css",
+      "jsFile": "funil.js",
+      "refreshSeconds": 30,
+      "permissions": {
+        "read": ["col:crm_negocios", "col:crm_contatos"],
+        "write": ["col:crm_negocios"],
+        "tools": [],
+        "agents": ["analista"]
+      }
+    },
+    {
+      "key": "contatos",
+      "name": "CRM: contatos",
+      "description": "Lista de contatos com busca, cadastro e quantidade de negócios de cada um.",
+      "htmlFile": "contatos.html",
+      "cssFile": "contatos.css",
+      "jsFile": "contatos.js",
+      "refreshSeconds": 30,
+      "permissions": {
+        "read": ["col:crm_contatos", "col:crm_negocios"],
+        "write": ["col:crm_contatos", "col:crm_negocios"],
+        "tools": [],
+        "agents": []
+      }
+    }
+  ],
+  "canvases": [
+    {
+      "key": "analista",
+      "name": "CRM: analista",
+      "description": "Lê negócios e contatos e responde a uma pergunta ou sugere os próximos follow-ups (o campo “Perguntar à IA” do funil executa este canvas).",
+      "nodes": [
+        {
+          "id": "pedido",
+          "type": "input.prompt",
+          "name": "Pergunta",
+          "x": 0,
+          "y": 60,
+          "config": {
+            "text": "Quais negócios precisam de follow-up esta semana e por quê?"
+          }
+        },
+        {
+          "id": "analista",
+          "type": "agent.llm",
+          "name": "Analista de vendas",
+          "x": 320,
+          "y": 40,
+          "config": {
+            "provider": "auto",
+            "instructions": "Você é um analista de vendas de um CRM. Hoje é {{now.date}}. Os dados ficam em duas coleções: crm_negocios (campos titulo, contato = nome do contato, valor em reais, etapa = lead|contato|proposta|negociacao|ganho|perdido, fechamento = data prevista AAAA-MM-DD, notas) e crm_contatos (nome, empresa, email, telefone, origem, notas). Antes de responder, chame list_records para crm_negocios e para crm_contatos. Considere em aberto as etapas lead, contato, proposta e negociacao; ganho e perdido são encerradas. Responda em português do Brasil, de forma direta, com no máximo 8 linhas ou tópicos: cite o título do negócio, o contato, o valor e a razão de cada sugestão (fechamento vencido ou próximo, valor alto, etapa parada). Se a mensagem for uma pergunta específica, responda a ela usando os dados; se pedir algo genérico, liste os próximos follow-ups em ordem de prioridade. Escreva em texto simples, sem markdown (nada de asteriscos ou #), usando \"- \" para os tópicos. Não invente dados e não altere nenhum registro.",
+            "tools": ["list_records"],
+            "maxSteps": 6
+          }
+        },
+        {
+          "id": "resultado",
+          "type": "output.result",
+          "name": "Análise",
+          "x": 660,
+          "y": 60,
+          "config": {
+            "title": "Análise do funil"
+          }
+        }
+      ],
+      "edges": [
+        { "id": "pedido_main_analista", "from": "pedido", "fromPort": "main", "to": "analista" },
+        { "id": "analista_main_resultado", "from": "analista", "fromPort": "main", "to": "resultado" }
+      ]
+    }
+  ],
+  "seed": {
+    "crm_contatos": [
+      { "nome": "Marina Costa", "empresa": "Lumen Estúdio", "email": "marina@lumenestudio.com.br", "telefone": "(11) 98877-1024", "origem": "indicacao", "notas": "Prefere contato por WhatsApp. Decide junto com o sócio." },
+      { "nome": "Rafael Nogueira", "empresa": "Nogueira & Filhos Contabilidade", "email": "rafael@nogueiracontab.com.br", "telefone": "(21) 99120-4477", "origem": "site" },
+      { "nome": "Camila Duarte", "empresa": "Verde Vivo Alimentos", "email": "camila.duarte@verdevivo.com.br", "telefone": "(31) 99654-3308", "origem": "evento", "notas": "Conheceu a equipe na Expo Alimentos 2026." },
+      { "nome": "Henrique Bastos", "empresa": "Bastos Logística", "email": "henrique@bastoslog.com.br", "telefone": "(41) 3222-9081", "origem": "prospeccao" },
+      { "nome": "Patrícia Lemos", "empresa": "Clínica Vida Plena", "email": "patricia@vidaplena.med.br", "telefone": "(51) 98111-7520", "origem": "indicacao", "notas": "Cliente satisfeita; pode indicar outras clínicas." },
+      { "nome": "Diego Amaral", "empresa": "Amaral Engenharia", "email": "diego@amaraleng.com.br", "telefone": "(61) 99233-6015", "origem": "redes-sociais" },
+      { "nome": "Larissa Prado", "empresa": "Studio Prado Arquitetura", "email": "larissa@studioprado.arq.br", "telefone": "(11) 97766-2210", "origem": "site" },
+      { "nome": "Tomás Ribeiro", "empresa": "TechNorte Sistemas", "email": "tomas@technorte.com.br", "telefone": "(85) 98890-1342", "origem": "evento", "notas": "Área de TI exige teste de segurança antes de assinar." }
+    ],
+    "crm_negocios": [
+      { "titulo": "Implantação de CRM", "contato": "Marina Costa", "valor": 18500, "etapa": "negociacao", "fechamento": "2026-10-10", "notas": "Aguardando aprovação do sócio." },
+      { "titulo": "Contrato de suporte anual", "contato": "Rafael Nogueira", "valor": 9600, "etapa": "proposta", "fechamento": "2026-09-15", "notas": "Proposta enviada em agosto; sem resposta." },
+      { "titulo": "Linha de embalagens sustentáveis", "contato": "Camila Duarte", "valor": 42000, "etapa": "proposta", "fechamento": "2026-11-05" },
+      { "titulo": "Roteirização de frota", "contato": "Henrique Bastos", "valor": 27300, "etapa": "contato", "fechamento": "2026-11-20" },
+      { "titulo": "Sistema de agendamento", "contato": "Patrícia Lemos", "valor": 15800, "etapa": "ganho", "fechamento": "2026-09-08" },
+      { "titulo": "Painel de obras", "contato": "Diego Amaral", "valor": 12400, "etapa": "lead", "fechamento": "2026-12-01" },
+      { "titulo": "Site institucional", "contato": "Larissa Prado", "valor": 7200, "etapa": "ganho", "fechamento": "2026-09-02" },
+      { "titulo": "Integração com ERP", "contato": "Tomás Ribeiro", "valor": 33900, "etapa": "negociacao", "fechamento": "2026-10-30" },
+      { "titulo": "Consultoria fiscal trimestral", "contato": "Rafael Nogueira", "valor": 5400, "etapa": "perdido", "fechamento": "2026-08-28", "notas": "Fechou com um concorrente mais barato." },
+      { "titulo": "Workshop de vendas", "contato": "Marina Costa", "valor": 3800, "etapa": "lead", "fechamento": "2026-10-15" },
+      { "titulo": "Portal de clientes", "contato": "Tomás Ribeiro", "valor": 21000, "etapa": "contato", "fechamento": "2026-11-12" }
+    ]
+  },
+  "pages": [
+    {
+      "name": "CRM",
+      "layout": [
+        { "kind": "heading", "text": "Indicadores", "x": 0, "y": 0, "w": 12, "h": 1 },
+        { "blockKey": "kpis", "x": 0, "y": 1, "w": 12, "h": 7 },
+        { "kind": "heading", "text": "Funil de vendas", "x": 0, "y": 8, "w": 12, "h": 1 },
+        { "blockKey": "funil", "x": 0, "y": 9, "w": 12, "h": 14 },
+        { "kind": "heading", "text": "Contatos", "x": 0, "y": 23, "w": 12, "h": 1 },
+        { "blockKey": "contatos", "x": 0, "y": 24, "w": 12, "h": 11 }
+      ]
+    }
+  ]
+}

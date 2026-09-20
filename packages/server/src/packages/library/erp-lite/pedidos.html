@@ -1,0 +1,21 @@
+<div class="ac-row ac-row-between ac-wrap bar">
+  <div class="ac-row ac-wrap">
+    <input id="q" class="ac-input" placeholder="Buscar cliente ou produto…" style="max-width:240px">
+    <select id="filtro" class="ac-select" style="width:auto" title="Filtrar por status">
+      <option value="">Todos os status</option>
+      <option value="aberto">Abertos</option>
+      <option value="pago">Pagos</option>
+      <option value="enviado">Enviados</option>
+      <option value="cancelado">Cancelados</option>
+    </select>
+  </div>
+  <button id="add" class="ac-btn ac-btn-primary">+ Pedido</button>
+</div>
+<div class="tablewrap">
+  <table class="ac-table">
+    <thead><tr><th>Data</th><th>Cliente</th><th>Produto</th><th>Qtd</th><th>Total</th><th>Status</th><th></th></tr></thead>
+    <tbody id="linhas"></tbody>
+  </table>
+</div>
+<div id="vazio" class="ac-empty" hidden></div>
+<div id="soma" class="ac-muted soma"></div>

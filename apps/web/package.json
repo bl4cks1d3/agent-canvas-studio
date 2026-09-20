@@ -1,0 +1,28 @@
+{
+  "name": "@agent-canvas/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 5200",
+    "build": "next build",
+    "start": "next start -p 5200",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@agent-canvas/shared": "workspace:*",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
+    "@xyflow/react": "^12.0.0",
+    "next": "^14.2.18",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-grid-layout": "^1.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/react": "^18.3.17",
+    "@types/react-dom": "^18.3.5",
+    "@types/react-grid-layout": "^1.3.6",
+    "typescript": "^5.7.2"
+  }
+}

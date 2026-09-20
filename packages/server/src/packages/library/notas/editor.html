@@ -1,0 +1,31 @@
+<div class="notas">
+  <aside class="lista">
+    <div class="ac-row">
+      <input id="q" class="ac-input ac-grow" placeholder="Buscar notas…">
+      <button id="nova" class="ac-btn ac-btn-primary">+ Nova</button>
+    </div>
+    <div id="tags" class="ac-row ac-wrap"></div>
+    <div id="itens" class="itens"></div>
+    <div id="semitens" class="ac-empty" hidden>Nenhuma nota encontrada.</div>
+  </aside>
+  <section class="editor">
+    <div id="vazio" class="ac-empty" hidden>Selecione uma nota na lista ou crie uma nova.</div>
+    <div id="form" class="ac-stack form" hidden>
+      <div class="ac-row ac-row-between ac-wrap">
+        <span id="estado" class="ac-badge">Salvo</span>
+        <span id="meta" class="ac-muted"></span>
+      </div>
+      <div class="ac-field"><label>Título</label><input id="titulo" class="ac-input" placeholder="Título da nota"></div>
+      <div class="ac-field corpo-wrap"><label>Texto</label><textarea id="corpo" class="ac-textarea corpo" placeholder="Escreva aqui…"></textarea></div>
+      <div class="ac-field"><label>Tags (separadas por vírgula)</label><input id="tagsin" class="ac-input" placeholder="ex.: trabalho, ideias"></div>
+      <div class="ac-row ac-row-between ac-wrap">
+        <label class="ac-row"><input id="fixada" type="checkbox"> Fixar no topo</label>
+        <div class="ac-row ac-wrap">
+          <button id="excluir" class="ac-btn ac-btn-danger">Excluir</button>
+          <button id="ia" class="ac-btn" title="Um agente resume a nota e lista as ações">Resumir com IA</button>
+          <button id="salvar" class="ac-btn ac-btn-primary" disabled>Salvar</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>

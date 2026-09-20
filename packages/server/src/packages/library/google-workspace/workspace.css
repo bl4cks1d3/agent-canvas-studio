@@ -1,0 +1,6 @@
+.barra { margin-bottom: 10px; }
+.tit { overflow-wrap: anywhere; }
+.sub { font-size: 12px; overflow-wrap: anywhere; }
+.dia { margin: 10px 0 4px; }
+.cru { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; padding: 8px; border: 1px solid var(--ac-border); border-radius: var(--ac-radius); background: var(--ac-surface); max-height: 320px; overflow: auto; }
+.feita .tit { text-decoration: line-through; opacity: 0.7; }

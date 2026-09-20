@@ -1,0 +1,195 @@
+{
+  "id": "kanban",
+  "name": "Quadro Kanban",
+  "description": "Quadro de tarefas em colunas com arrastar-e-soltar, prioridade e prazo. Um agente quebra um objetivo em cartões.",
+  "category": "produtividade",
+  "version": "1.0.0",
+  "requires": [
+    {
+      "id": "cartoes",
+      "kind": "collection",
+      "label": "Coleção kanban_cartoes (criada na instalação)",
+      "collection": "kanban_cartoes"
+    },
+    {
+      "id": "ia",
+      "kind": "ai",
+      "label": "Provedor de IA (para o botão “Planejar com IA”)",
+      "optional": true
+    }
+  ],
+  "collections": [
+    {
+      "name": "kanban_cartoes",
+      "label": "Cartões do Kanban",
+      "description": "Cada cartão do quadro.",
+      "fields": [
+        {
+          "name": "titulo",
+          "label": "Título",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "descricao",
+          "label": "Descrição",
+          "type": "longtext"
+        },
+        {
+          "name": "coluna",
+          "label": "Coluna",
+          "type": "select",
+          "options": [
+            "a-fazer",
+            "fazendo",
+            "revisao",
+            "feito"
+          ]
+        },
+        {
+          "name": "prioridade",
+          "label": "Prioridade",
+          "type": "select",
+          "options": [
+            "baixa",
+            "media",
+            "alta"
+          ]
+        },
+        {
+          "name": "responsavel",
+          "label": "Responsável",
+          "type": "text"
+        },
+        {
+          "name": "prazo",
+          "label": "Prazo",
+          "type": "date"
+        }
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "key": "quadro",
+      "name": "Quadro Kanban",
+      "description": "Colunas A fazer / Fazendo / Revisão / Feito com arrastar-e-soltar.",
+      "htmlFile": "quadro.html",
+      "cssFile": "quadro.css",
+      "jsFile": "quadro.js",
+      "refreshSeconds": 20,
+      "permissions": {
+        "read": [
+          "col:kanban_cartoes"
+        ],
+        "write": [
+          "col:kanban_cartoes"
+        ],
+        "tools": [],
+        "agents": [
+          "planejador"
+        ]
+      }
+    }
+  ],
+  "canvases": [
+    {
+      "key": "planejador",
+      "name": "Kanban: planejador",
+      "description": "Transforma um objetivo em cartões no quadro (o botão “Planejar com IA” do componente executa este canvas).",
+      "nodes": [
+        {
+          "id": "pedido",
+          "type": "input.prompt",
+          "name": "Objetivo",
+          "x": 0,
+          "y": 60,
+          "config": {
+            "text": "Lançar um site de portfólio com blog"
+          }
+        },
+        {
+          "id": "planejador",
+          "type": "agent.llm",
+          "name": "Planejador",
+          "x": 320,
+          "y": 40,
+          "config": {
+            "provider": "auto",
+            "instructions": "Você planeja trabalho em um quadro Kanban. Leia o objetivo e crie de 3 a 7 tarefas concretas e curtas chamando a ferramenta save_record uma vez por tarefa, com collection \"kanban_cartoes\" e data {titulo, descricao (1 frase), coluna \"a-fazer\", prioridade \"baixa\"|\"media\"|\"alta\"}. Não repita cartões que já existem (confira com list_records antes). Ao terminar, responda só com a lista dos títulos criados.",
+            "tools": [
+              "list_records",
+              "save_record"
+            ],
+            "maxSteps": 12
+          }
+        },
+        {
+          "id": "resultado",
+          "type": "output.result",
+          "name": "Cartões criados",
+          "x": 660,
+          "y": 60,
+          "config": {
+            "title": "Cartões criados"
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "pedido_main_planejador",
+          "from": "pedido",
+          "fromPort": "main",
+          "to": "planejador"
+        },
+        {
+          "id": "planejador_main_resultado",
+          "from": "planejador",
+          "fromPort": "main",
+          "to": "resultado"
+        }
+      ]
+    }
+  ],
+  "seed": {
+    "kanban_cartoes": [
+      {
+        "titulo": "Definir escopo do projeto",
+        "descricao": "Listar o que entra e o que fica de fora.",
+        "coluna": "feito",
+        "prioridade": "alta"
+      },
+      {
+        "titulo": "Desenhar as telas principais",
+        "descricao": "Rascunho no papel ou Figma.",
+        "coluna": "fazendo",
+        "prioridade": "media",
+        "responsavel": "Você"
+      },
+      {
+        "titulo": "Configurar o ambiente",
+        "coluna": "a-fazer",
+        "prioridade": "baixa"
+      },
+      {
+        "titulo": "Revisar textos",
+        "coluna": "revisao",
+        "prioridade": "baixa"
+      }
+    ]
+  },
+  "pages": [
+    {
+      "name": "Kanban",
+      "layout": [
+        {
+          "blockKey": "quadro",
+          "x": 0,
+          "y": 0,
+          "w": 12,
+          "h": 14
+        }
+      ]
+    }
+  ]
+}

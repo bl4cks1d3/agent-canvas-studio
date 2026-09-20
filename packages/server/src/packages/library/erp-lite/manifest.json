@@ -1,0 +1,189 @@
+{
+  "id": "erp-lite",
+  "name": "ERP leve",
+  "description": "Produtos, estoque e pedidos com indicadores de faturamento. O estoque baixa ao criar um pedido e volta ao cancelar; um agente sugere a reposição.",
+  "category": "negócios",
+  "version": "1.0.0",
+  "requires": [
+    {
+      "id": "produtos",
+      "kind": "collection",
+      "label": "Coleção erp_produtos (criada na instalação)",
+      "collection": "erp_produtos"
+    },
+    {
+      "id": "pedidos",
+      "kind": "collection",
+      "label": "Coleção erp_pedidos (criada na instalação)",
+      "collection": "erp_pedidos"
+    },
+    {
+      "id": "ia",
+      "kind": "ai",
+      "label": "Provedor de IA (para o botão “Sugerir reposição”)",
+      "optional": true
+    }
+  ],
+  "collections": [
+    {
+      "name": "erp_produtos",
+      "label": "Produtos do ERP",
+      "description": "Catálogo com preço e estoque.",
+      "fields": [
+        { "name": "nome", "label": "Nome", "type": "text", "required": true },
+        { "name": "sku", "label": "SKU", "type": "text" },
+        { "name": "preco", "label": "Preço (R$)", "type": "number" },
+        { "name": "estoque", "label": "Estoque", "type": "number" },
+        { "name": "minimo", "label": "Estoque mínimo", "type": "number" }
+      ]
+    },
+    {
+      "name": "erp_pedidos",
+      "label": "Pedidos do ERP",
+      "description": "Cada pedido de um cliente para um produto.",
+      "fields": [
+        { "name": "cliente", "label": "Cliente", "type": "text", "required": true },
+        { "name": "produto", "label": "Produto (nome)", "type": "text", "required": true },
+        { "name": "quantidade", "label": "Quantidade", "type": "number", "required": true },
+        { "name": "total", "label": "Total (R$)", "type": "number" },
+        {
+          "name": "status",
+          "label": "Status",
+          "type": "select",
+          "options": ["aberto", "pago", "enviado", "cancelado"]
+        },
+        { "name": "data", "label": "Data", "type": "date" }
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "key": "kpis",
+      "name": "ERP: indicadores",
+      "description": "Faturamento, pedidos em aberto, produtos abaixo do mínimo e os mais vendidos.",
+      "htmlFile": "kpis.html",
+      "cssFile": "kpis.css",
+      "jsFile": "kpis.js",
+      "refreshSeconds": 30,
+      "permissions": {
+        "read": ["col:erp_produtos", "col:erp_pedidos"],
+        "write": [],
+        "tools": [],
+        "agents": []
+      }
+    },
+    {
+      "key": "produtos",
+      "name": "ERP: produtos e estoque",
+      "description": "Tabela de produtos com ajuste rápido de estoque e destaque do que está abaixo do mínimo.",
+      "htmlFile": "produtos.html",
+      "cssFile": "produtos.css",
+      "jsFile": "produtos.js",
+      "refreshSeconds": 20,
+      "permissions": {
+        "read": ["col:erp_produtos", "col:erp_pedidos"],
+        "write": ["col:erp_produtos", "col:erp_pedidos"],
+        "tools": [],
+        "agents": ["reposicao"]
+      }
+    },
+    {
+      "key": "pedidos",
+      "name": "ERP: pedidos",
+      "description": "Pedidos com criação (baixa o estoque), troca de status (cancelar devolve o estoque) e exclusão.",
+      "htmlFile": "pedidos.html",
+      "cssFile": "pedidos.css",
+      "jsFile": "pedidos.js",
+      "refreshSeconds": 20,
+      "permissions": {
+        "read": ["col:erp_pedidos", "col:erp_produtos"],
+        "write": ["col:erp_pedidos", "col:erp_produtos"],
+        "tools": [],
+        "agents": []
+      }
+    }
+  ],
+  "canvases": [
+    {
+      "key": "reposicao",
+      "name": "ERP: reposição",
+      "description": "Lê produtos e pedidos e propõe a lista de reposição de estoque (o botão “Sugerir reposição” da tabela de produtos executa este canvas).",
+      "nodes": [
+        {
+          "id": "pedido",
+          "type": "input.prompt",
+          "name": "Pedido",
+          "x": 0,
+          "y": 60,
+          "config": {
+            "text": "Monte a lista de reposição de estoque."
+          }
+        },
+        {
+          "id": "comprador",
+          "type": "agent.llm",
+          "name": "Analista de compras",
+          "x": 320,
+          "y": 40,
+          "config": {
+            "provider": "auto",
+            "instructions": "Você é um analista de compras de uma loja. Hoje é {{now.date}}. Antes de responder, chame list_records para erp_produtos (campos nome, sku, preco, estoque, minimo) e para erp_pedidos (cliente, produto = nome do produto, quantidade, total, status aberto|pago|enviado|cancelado, data). Um produto precisa de reposição quando estoque < minimo, ou quando o estoque menos as unidades dos pedidos com status aberto ficaria abaixo do mínimo. Para cada produto que precisa, proponha uma quantidade de compra = (minimo x 2) - estoque, aumentando quando os pedidos pagos ou enviados mostrarem venda alta, e ignore pedidos cancelados. Ordene do mais urgente (maior falta em relação ao mínimo) para o menos urgente. Responda em português do Brasil, em texto simples, sem markdown (nada de asteriscos ou #), uma linha por produto no formato \"- Nome (SKU): estoque X, mínimo Y, comprar Z un. — motivo curto\". Se nenhum produto precisar, responda apenas \"Nenhum produto precisa de reposição agora.\". Não invente dados e não altere nenhum registro.",
+            "tools": ["list_records"],
+            "maxSteps": 6
+          }
+        },
+        {
+          "id": "resultado",
+          "type": "output.result",
+          "name": "Lista de reposição",
+          "x": 660,
+          "y": 60,
+          "config": {
+            "title": "Lista de reposição"
+          }
+        }
+      ],
+      "edges": [
+        { "id": "pedido_main_comprador", "from": "pedido", "fromPort": "main", "to": "comprador" },
+        { "id": "comprador_main_resultado", "from": "comprador", "fromPort": "main", "to": "resultado" }
+      ]
+    }
+  ],
+  "seed": {
+    "erp_produtos": [
+      { "nome": "Camiseta Básica Algodão", "sku": "CAM-001", "preco": 59.9, "estoque": 48, "minimo": 20 },
+      { "nome": "Calça Jeans Slim", "sku": "CAL-014", "preco": 149.9, "estoque": 12, "minimo": 15 },
+      { "nome": "Tênis Urbano Preto", "sku": "TEN-203", "preco": 289, "estoque": 9, "minimo": 10 },
+      { "nome": "Mochila Impermeável 20L", "sku": "MOC-032", "preco": 179.9, "estoque": 27, "minimo": 10 },
+      { "nome": "Boné Aba Curva", "sku": "BON-007", "preco": 39.9, "estoque": 60, "minimo": 25 },
+      { "nome": "Meia Esportiva (par)", "sku": "MEI-101", "preco": 14.9, "estoque": 5, "minimo": 30 },
+      { "nome": "Jaqueta Corta-Vento", "sku": "JAQ-055", "preco": 219.9, "estoque": 18, "minimo": 8 },
+      { "nome": "Cinto de Couro", "sku": "CIN-020", "preco": 89.9, "estoque": 22, "minimo": 10 }
+    ],
+    "erp_pedidos": [
+      { "cliente": "Mercado Central Ltda", "produto": "Camiseta Básica Algodão", "quantidade": 12, "total": 718.8, "status": "pago", "data": "2026-09-02" },
+      { "cliente": "Loja Esquina Moda", "produto": "Calça Jeans Slim", "quantidade": 6, "total": 899.4, "status": "enviado", "data": "2026-09-04" },
+      { "cliente": "Ana Beatriz Ramos", "produto": "Tênis Urbano Preto", "quantidade": 1, "total": 289, "status": "pago", "data": "2026-09-05" },
+      { "cliente": "Academia Movimento", "produto": "Meia Esportiva (par)", "quantidade": 40, "total": 596, "status": "enviado", "data": "2026-09-08" },
+      { "cliente": "Rodrigo Menezes", "produto": "Mochila Impermeável 20L", "quantidade": 2, "total": 359.8, "status": "aberto", "data": "2026-09-10" },
+      { "cliente": "Empório do Norte", "produto": "Boné Aba Curva", "quantidade": 15, "total": 598.5, "status": "pago", "data": "2026-09-11" },
+      { "cliente": "Clube Náutico", "produto": "Jaqueta Corta-Vento", "quantidade": 4, "total": 879.6, "status": "aberto", "data": "2026-09-14" },
+      { "cliente": "Juliana Prates", "produto": "Cinto de Couro", "quantidade": 2, "total": 179.8, "status": "cancelado", "data": "2026-09-15" },
+      { "cliente": "Loja Esquina Moda", "produto": "Tênis Urbano Preto", "quantidade": 3, "total": 867, "status": "aberto", "data": "2026-09-16" },
+      { "cliente": "Mercado Central Ltda", "produto": "Meia Esportiva (par)", "quantidade": 20, "total": 298, "status": "pago", "data": "2026-09-17" }
+    ]
+  },
+  "pages": [
+    {
+      "name": "ERP",
+      "layout": [
+        { "kind": "heading", "text": "Visão geral", "x": 0, "y": 0, "w": 12, "h": 1 },
+        { "blockKey": "kpis", "x": 0, "y": 1, "w": 12, "h": 7 },
+        { "kind": "heading", "text": "Produtos e estoque", "x": 0, "y": 8, "w": 12, "h": 1 },
+        { "blockKey": "produtos", "x": 0, "y": 9, "w": 12, "h": 12 },
+        { "kind": "heading", "text": "Pedidos", "x": 0, "y": 21, "w": 12, "h": 1 },
+        { "blockKey": "pedidos", "x": 0, "y": 22, "w": 12, "h": 12 }
+      ]
+    }
+  ]
+}

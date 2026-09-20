@@ -1,0 +1,284 @@
+{
+  "id": "google-workspace",
+  "name": "Google Workspace",
+  "description": "Google Agenda, Gmail e Google Tasks num só painel, lidos por um servidor MCP que você conecta. Tarefas podem ser criadas e concluídas. Experimental: o formato das respostas varia de servidor para servidor.",
+  "category": "integração",
+  "version": "0.2.0",
+  "experimental": true,
+  "requires": [
+    {
+      "id": "calendario_listar",
+      "kind": "tool",
+      "label": "Calendário: listar eventos",
+      "hint": "Ferramenta do MCP do Google Workspace que lista eventos (ex.: calendar list events).",
+      "match": [
+        "calendar",
+        "event",
+        "agenda"
+      ],
+      "optional": true
+    },
+    {
+      "id": "gmail_buscar",
+      "kind": "tool",
+      "label": "Gmail: buscar mensagens",
+      "hint": "Ferramenta do MCP do Google Workspace que busca ou lista e-mails, somente leitura (ex.: gmail search messages).",
+      "match": [
+        "gmail",
+        "mail",
+        "message",
+        "thread"
+      ],
+      "optional": true
+    },
+    {
+      "id": "tarefas_listar",
+      "kind": "tool",
+      "label": "Tarefas: listar tarefas",
+      "hint": "Ferramenta do MCP do Google Workspace que lista as tarefas do Google Tasks (ex.: tasks list tasks).",
+      "match": [
+        "list_task",
+        "tasks_list",
+        "tasks.list",
+        "get_tasks",
+        "list_tasks"
+      ],
+      "optional": true
+    },
+    {
+      "id": "tarefas_criar",
+      "kind": "tool",
+      "label": "Tarefas: criar tarefa",
+      "hint": "Opcional. Ferramenta que cria uma tarefa no Google Tasks (ex.: tasks create task). Sem ela, o botão “+ Tarefa” não aparece.",
+      "match": [
+        "create_task",
+        "add_task",
+        "insert_task",
+        "tasks_create",
+        "tasks.insert",
+        "new_task"
+      ],
+      "optional": true
+    },
+    {
+      "id": "tarefas_concluir",
+      "kind": "tool",
+      "label": "Tarefas: concluir tarefa",
+      "hint": "Opcional. Ferramenta que marca uma tarefa como concluída (ex.: tasks complete task ou update task). Sem ela, a lista é só de leitura.",
+      "match": [
+        "complete",
+        "update_task",
+        "patch_task",
+        "mark_task",
+        "done"
+      ],
+      "optional": true
+    },
+    {
+      "id": "ia",
+      "kind": "ai",
+      "label": "Provedor de IA (para o resumo do dia)",
+      "optional": true
+    }
+  ],
+  "collections": [],
+  "blocks": [
+    {
+      "key": "resumo",
+      "name": "Workspace: resumo do dia",
+      "description": "Botão que pede a um agente o resumo do dia (agenda, e-mails importantes e tarefas) e guarda o último resumo.",
+      "htmlFile": "resumo.html",
+      "cssFile": "resumo.css",
+      "jsFile": "resumo.js",
+      "refreshSeconds": 0,
+      "permissions": {
+        "read": [],
+        "write": [],
+        "tools": [],
+        "agents": [
+          "resumo_do_dia"
+        ]
+      }
+    },
+    {
+      "key": "agenda",
+      "name": "Workspace: agenda",
+      "description": "Eventos do Google Agenda agrupados por dia, com busca.",
+      "htmlFile": "agenda.html",
+      "cssFile": "workspace.css",
+      "jsFile": "workspace.js",
+      "refreshSeconds": 300,
+      "permissions": {
+        "read": [],
+        "write": [],
+        "tools": [
+          "@calendario_listar"
+        ],
+        "agents": []
+      }
+    },
+    {
+      "key": "tarefas",
+      "name": "Workspace: tarefas",
+      "description": "Tarefas do Google Tasks; cria e conclui quando as ferramentas de ação estiverem conectadas.",
+      "htmlFile": "tarefas.html",
+      "cssFile": "workspace.css",
+      "jsFile": "workspace.js",
+      "refreshSeconds": 300,
+      "permissions": {
+        "read": [],
+        "write": [],
+        "tools": [
+          "@tarefas_listar",
+          "@tarefas_criar",
+          "@tarefas_concluir"
+        ],
+        "agents": []
+      }
+    },
+    {
+      "key": "emails",
+      "name": "Workspace: e-mails",
+      "description": "Mensagens do Gmail (somente leitura) com busca.",
+      "htmlFile": "emails.html",
+      "cssFile": "workspace.css",
+      "jsFile": "workspace.js",
+      "refreshSeconds": 300,
+      "permissions": {
+        "read": [],
+        "write": [],
+        "tools": [
+          "@gmail_buscar"
+        ],
+        "agents": []
+      }
+    }
+  ],
+  "canvases": [
+    {
+      "key": "resumo_do_dia",
+      "name": "Workspace: resumo do dia",
+      "description": "Resume a agenda de hoje, os e-mails importantes e as tarefas pendentes usando as ferramentas do Google Workspace que você conectou.",
+      "nodes": [
+        {
+          "id": "pedido",
+          "type": "input.prompt",
+          "name": "Pedido",
+          "x": 0,
+          "y": 60,
+          "config": {
+            "text": "Faça o resumo do meu dia."
+          }
+        },
+        {
+          "id": "assistente",
+          "type": "agent.llm",
+          "name": "Assistente do dia",
+          "x": 320,
+          "y": 40,
+          "config": {
+            "provider": "auto",
+            "instructions": "Você é um assistente pessoal. Hoje é {{now.date}}. Use as ferramentas disponíveis: a de calendário para listar os eventos de hoje (e, se quiser, dos próximos dois dias), a de e-mail para buscar as mensagens recentes mais importantes (por exemplo não lidas ou marcadas como importantes) e a de tarefas para listar as tarefas pendentes do Google Tasks. Se alguma ferramenta não estiver disponível, diga que ela não está conectada e resuma apenas o que for possível. Escreva em português do Brasil, em texto simples, sem markdown (nada de asteriscos ou #), com quatro seções: \"Agenda de hoje\" (um tópico \"- \" por evento: horário, título e local quando houver), \"E-mails importantes\" (um tópico por mensagem: remetente, assunto e por que importa), \"Tarefas\" (um tópico por tarefa pendente, destacando as atrasadas e as que vencem hoje) e \"Sugestões\" (até 3 tópicos curtos sobre o que fazer primeiro). Não invente eventos, mensagens nem tarefas. Não envie e-mails, não crie nem conclua tarefas e não altere eventos: apenas leia e resuma.",
+            "tools": [
+              "@calendario_listar",
+              "@gmail_buscar",
+              "@tarefas_listar"
+            ],
+            "maxSteps": 8
+          }
+        },
+        {
+          "id": "resultado",
+          "type": "output.result",
+          "name": "Resumo do dia",
+          "x": 660,
+          "y": 60,
+          "config": {
+            "title": "Resumo do dia"
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "pedido_main_assistente",
+          "from": "pedido",
+          "fromPort": "main",
+          "to": "assistente"
+        },
+        {
+          "id": "assistente_main_resultado",
+          "from": "assistente",
+          "fromPort": "main",
+          "to": "resultado"
+        }
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "Workspace",
+      "layout": [
+        {
+          "kind": "heading",
+          "text": "Resumo do dia",
+          "x": 0,
+          "y": 0,
+          "w": 12,
+          "h": 1
+        },
+        {
+          "blockKey": "resumo",
+          "x": 0,
+          "y": 1,
+          "w": 12,
+          "h": 6
+        },
+        {
+          "kind": "heading",
+          "text": "Agenda",
+          "x": 0,
+          "y": 7,
+          "w": 6,
+          "h": 1
+        },
+        {
+          "kind": "heading",
+          "text": "Tarefas",
+          "x": 6,
+          "y": 7,
+          "w": 6,
+          "h": 1
+        },
+        {
+          "blockKey": "agenda",
+          "x": 0,
+          "y": 8,
+          "w": 6,
+          "h": 14
+        },
+        {
+          "blockKey": "tarefas",
+          "x": 6,
+          "y": 8,
+          "w": 6,
+          "h": 14
+        },
+        {
+          "kind": "heading",
+          "text": "E-mails",
+          "x": 0,
+          "y": 22,
+          "w": 12,
+          "h": 1
+        },
+        {
+          "blockKey": "emails",
+          "x": 0,
+          "y": 23,
+          "w": 12,
+          "h": 12
+        }
+      ]
+    }
+  ]
+}

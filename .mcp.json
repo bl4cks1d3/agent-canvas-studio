@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "agent-canvas": {
+      "command": "node",
+      "args": [
+        "packages/mcp/dist/index.js"
+      ]
+    },
+    "google-workspace": {
+      "command": "uvx",
+      "args": [
+        "workspace-mcp",
+        "--tools",
+        "calendar",
+        "gmail",
+        "tasks"
+      ]
+    }
+  }
+}
