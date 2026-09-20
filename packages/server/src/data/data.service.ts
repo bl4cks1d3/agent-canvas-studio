@@ -1,14 +1,18 @@
 import { ChangesService } from "../events/changes.service";
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
-import type { Collection, CollectionField, CollectionFieldType } from "@agent-canvas/shared";
+import type { Collection, CollectionField, CollectionFieldType, FieldDefault } from "@agent-canvas/shared";
+import { localDate, localIso, localTime } from "../clock";
 import type { CanvasDb } from "../db";
 import { CANVAS_DB } from "../database.module";
 
 const NAME_RE = /^[a-z][a-z0-9_]{1,39}$/;
 const FIELD_RE = /^[a-z][a-z0-9_]{0,39}$/;
 const RESERVED_FIELDS = new Set(["id", "createdat", "updatedat", "created_at", "updated_at"]);
-const TYPES: CollectionFieldType[] = ["text", "longtext", "number", "date", "boolean", "select"];
+const TYPES: CollectionFieldType[] = ["text", "longtext", "number", "date", "boolean", "select", "relation"];
+const DEFAULTS: FieldDefault[] = ["now", "today", "time"];
+const TRASH_DAYS = 30;
+const TRASH_MAX_PER_COLLECTION = 500;
 const MAX_FIELDS = 40;
 const MAX_RECORDS = 10_000;
 const MAX_TEXT = 2_000;
@@ -119,6 +123,7 @@ export class DataService {
   removeCollection(name: string) {
     const collection = this.getCollection(name);
     this.db.prepare(`DELETE FROM records WHERE collection_id = ?`).run(collection.id);
+    this.db.prepare(`DELETE FROM record_trash WHERE collection_name = ?`).run(collection.name);
     this.db.prepare(`DELETE FROM collections WHERE id = ?`).run(collection.id);
     this.changes.emit("data", name);
     return { ok: true };
@@ -182,12 +187,98 @@ export class DataService {
     return { ...merged, id, createdAt: row.created_at, updatedAt: now };
   }
 
+  /** Apagar manda para a lixeira (restaurar com restoreRecord por 30 dias). */
   removeRecord(name: string, id: string) {
     const collection = this.getCollection(name);
-    const result = this.db.prepare(`DELETE FROM records WHERE id = ? AND collection_id = ?`).run(id, collection.id);
-    if (Number(result.changes) === 0) throw new NotFoundException("registro nao encontrado");
+    this.trash(collection, id);
     this.changes.emit("data", name);
-    return { ok: true };
+    return { ok: true, trashed: true, restore: `POST /collections/${name}/records/${id}/restore` };
+  }
+
+  private trash(collection: Collection, id: string): void {
+    const row = this.db.prepare(`SELECT * FROM records WHERE id = ? AND collection_id = ?`).get(id, collection.id) as RecordRow | undefined;
+    if (!row) throw new NotFoundException("registro nao encontrado");
+    const now = new Date();
+    this.db
+      .prepare(`INSERT OR REPLACE INTO record_trash (id, collection_name, data, created_at, updated_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?)`)
+      .run(row.id, collection.name, row.data, row.created_at, row.updated_at, now.toISOString());
+    this.db.prepare(`DELETE FROM records WHERE id = ?`).run(id);
+    // a lixeira nao cresce sem fim: some o que passou de 30 dias e o excedente de 500 por colecao
+    this.db.prepare(`DELETE FROM record_trash WHERE deleted_at < ?`).run(new Date(now.getTime() - TRASH_DAYS * 86_400_000).toISOString());
+    this.db
+      .prepare(`DELETE FROM record_trash WHERE collection_name = ? AND id NOT IN (SELECT id FROM record_trash WHERE collection_name = ? ORDER BY deleted_at DESC LIMIT ?)`)
+      .run(collection.name, collection.name, TRASH_MAX_PER_COLLECTION);
+  }
+
+  listTrash(name: string): Array<FlatRecord & { deletedAt: string }> {
+    this.getCollection(name);
+    const rows = this.db.prepare(`SELECT * FROM record_trash WHERE collection_name = ? ORDER BY deleted_at DESC`).all(name) as unknown as Array<RecordRow & { deleted_at: string }>;
+    return rows.map((r) => ({ ...toRecord({ ...r, collection_id: "" }), deletedAt: r.deleted_at }));
+  }
+
+  /** Apaga DE VEZ da lixeira (um registro, ou todos se nao passar o id). Irreversivel: so quando o usuario pedir. */
+  purgeTrash(name: string, id?: string): { ok: true; purged: number } {
+    this.getCollection(name);
+    const r = id
+      ? this.db.prepare(`DELETE FROM record_trash WHERE collection_name = ? AND id = ?`).run(name, id)
+      : this.db.prepare(`DELETE FROM record_trash WHERE collection_name = ?`).run(name);
+    return { ok: true, purged: Number(r.changes) };
+  }
+
+  restoreRecord(name: string, id: string): FlatRecord {
+    const collection = this.getCollection(name);
+    const row = this.db.prepare(`SELECT * FROM record_trash WHERE id = ? AND collection_name = ?`).get(id, name) as unknown as (RecordRow & { deleted_at: string }) | undefined;
+    if (!row) throw new NotFoundException("registro nao esta na lixeira (ja restaurado ou passou de 30 dias)");
+    const count = this.db.prepare(`SELECT COUNT(*) AS n FROM records WHERE collection_id = ?`).get(collection.id) as { n: number };
+    if (count.n >= MAX_RECORDS) throw new BadRequestException(`limite de ${MAX_RECORDS} registros por colecao`);
+    this.db.prepare(`INSERT INTO records (id, collection_id, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`).run(row.id, collection.id, row.data, row.created_at, row.updated_at);
+    this.db.prepare(`DELETE FROM record_trash WHERE id = ?`).run(id);
+    this.changes.emit("data", name);
+    return toRecord({ ...row, collection_id: collection.id });
+  }
+
+  /**
+   * Varias operacoes de uma vez, tudo ou nada: se uma falha (campo invalido, id que nao existe), NADA e gravado.
+   * body: { create?: [dados...], update?: [{ id, data }...], delete?: [id...] } (ate 200 no total; delete vai para a lixeira).
+   */
+  batchRecords(name: string, body: Record<string, unknown>) {
+    const collection = this.getCollection(name);
+    const list = (v: unknown, what: string): unknown[] => {
+      if (v === undefined || v === null) return [];
+      if (!Array.isArray(v)) throw new BadRequestException(`${what} deve ser uma lista`);
+      return v;
+    };
+    const creates = list(body.create, "create");
+    const updates = list(body.update, "update");
+    const deletes = list(body.delete, "delete");
+    if (creates.length + updates.length + deletes.length === 0) throw new BadRequestException("nada a fazer: envie create, update e/ou delete");
+    if (creates.length + updates.length + deletes.length > 200) throw new BadRequestException("no maximo 200 operacoes por lote");
+    const created: FlatRecord[] = [];
+    const updated: FlatRecord[] = [];
+    const deleted: string[] = [];
+    this.db.exec("BEGIN");
+    try {
+      creates.forEach((d, i) => {
+        if (typeof d !== "object" || d === null || Array.isArray(d)) throw new BadRequestException(`create[${i}] deve ser um objeto`);
+        created.push(this.createRecord(name, d as Record<string, unknown>));
+      });
+      updates.forEach((u, i) => {
+        const o = (u ?? {}) as { id?: unknown; data?: unknown };
+        if (typeof o.id !== "string" || typeof o.data !== "object" || o.data === null) throw new BadRequestException(`update[${i}] deve ser { id, data }`);
+        updated.push(this.updateRecord(name, o.id, o.data as Record<string, unknown>));
+      });
+      deletes.forEach((id, i) => {
+        if (typeof id !== "string") throw new BadRequestException(`delete[${i}] deve ser um id`);
+        this.trash(collection, id);
+        deleted.push(id);
+      });
+      this.db.exec("COMMIT");
+    } catch (err) {
+      this.db.exec("ROLLBACK");
+      throw err;
+    }
+    this.changes.emit("data", name);
+    return { created, updated, deleted };
   }
 
   // ---------------------------------------------------------------- validacao
@@ -220,6 +311,15 @@ export class DataService {
       const field: CollectionField = { name, type };
       if (typeof f.label === "string" && f.label.trim()) field.label = f.label.trim().slice(0, 80);
       if (f.required === true) field.required = true;
+      if (type === "relation") {
+        field.collection = this.slug(f.collection, NAME_RE, `campo ${name} (relation) precisa de "collection": o nome da colecao apontada`);
+      }
+      if (f.default !== undefined && f.default !== null && f.default !== "") {
+        if (!DEFAULTS.includes(f.default as FieldDefault)) throw new BadRequestException(`default do campo ${name} deve ser: ${DEFAULTS.join(", ")}`);
+        const okType = f.default === "time" ? type === "text" : type === "date" || type === "text";
+        if (!okType) throw new BadRequestException(`default "${String(f.default)}" nao serve para o campo ${name} (${type}): "time" so em text; "now" e "today" em date ou text`);
+        field.default = f.default as FieldDefault;
+      }
       if (type === "select") {
         const options = Array.isArray(f.options) ? f.options.filter((o): o is string => typeof o === "string" && o.trim() !== "").map((o) => o.trim()) : [];
         if (options.length === 0) throw new BadRequestException(`campo ${name} (select) precisa de options`);
@@ -240,7 +340,10 @@ export class DataService {
       out[key] = this.coerce(field, value);
     }
     if (creating) {
+      const now = new Date();
       for (const field of collection.fields) {
+        // data/hora preenchidas pelo servidor, no fuso local (ninguem precisa perguntar as horas nem misturar UTC com hora local)
+        if (out[field.name] === undefined && field.default) out[field.name] = field.default === "now" ? localIso(now) : field.default === "today" ? localDate(now) : localTime(now);
         if (field.required && out[field.name] === undefined) throw new BadRequestException(`campo obrigatorio: ${field.name}`);
       }
     }
@@ -265,6 +368,14 @@ export class DataService {
       case "select":
         if (typeof value !== "string" || !field.options?.includes(value)) throw new BadRequestException(`${field.name} deve ser um de: ${field.options?.join(", ")}`);
         return value;
+      case "relation": {
+        if (typeof value !== "string") throw new BadRequestException(`${field.name} deve ser o id de um registro de ${field.collection}`);
+        const hit = this.db
+          .prepare(`SELECT 1 FROM records r JOIN collections c ON c.id = r.collection_id WHERE c.name = ? AND r.id = ?`)
+          .get(field.collection ?? "", value);
+        if (!hit) throw new BadRequestException(`${field.name}: nao existe registro com id "${value}" em ${field.collection} (use o id de list_records ${field.collection})`);
+        return value;
+      }
       case "longtext":
       case "text":
         if (typeof value !== "string") throw new BadRequestException(`${field.name} deve ser texto`);

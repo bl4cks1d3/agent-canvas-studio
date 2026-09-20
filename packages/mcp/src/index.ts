@@ -114,11 +114,11 @@ const STUDIO_TOOLS: ToolDef[] = [
     name: "list_collections",
     description: "Lista as colecoes (tabelas do banco do Studio): nome, campos e numero de registros.",
     inputSchema: { type: "object", properties: {} },
-    run: async () => (await api("GET", "/collections")).map((c: any) => ({ nome: c.name, titulo: c.label, campos: c.fields.map((f: any) => `${f.name}:${f.type}${f.required ? "*" : ""}${f.options ? `(${f.options.join("|")})` : ""}`), registros: c.records })),
+    run: async () => (await api("GET", "/collections")).map((c: any) => ({ nome: c.name, titulo: c.label, campos: c.fields.map((f: any) => `${f.name}:${f.type}${f.required ? "*" : ""}${f.options ? `(${f.options.join("|")})` : ""}${f.collection ? `->${f.collection}` : ""}${f.default ? `=${f.default}` : ""}`), registros: c.records })),
   },
   {
     name: "save_collection",
-    description: "Cria a colecao (ou atualiza titulo/campos se ja existir). fields: [{name, type: text|longtext|number|date|boolean|select, label?, required?, options? (select)}]. Os dados persistem no banco.",
+    description: "Cria a colecao (ou atualiza titulo/campos se ja existir). fields: [{name, type: text|longtext|number|date|boolean|select|relation, label?, required?, options? (select), collection? (relation: nome da colecao apontada; o servidor recusa id que nao existe), default? (now|today|time: o servidor preenche sozinho ao criar, no fuso local)}]. Os dados persistem no banco.",
     inputSchema: {
       type: "object",
       properties: { name: { type: "string" }, label: { type: "string" }, description: { type: "string" }, fields: { type: "array", items: { type: "object" } } },
@@ -151,8 +151,37 @@ const STUDIO_TOOLS: ToolDef[] = [
         : api("POST", `/collections/${enc(String(a.collection))}/records`, a.data),
   },
   {
+    name: "now",
+    description: "Data e hora ATUAIS no fuso local do usuario ({ local (com fuso), date, time, weekday, timezone, text }). Use em vez de rodar 'date' no terminal ou de adivinhar; campos de data/hora com default preenchem sozinhos ao criar o registro.",
+    inputSchema: { type: "object", properties: {} },
+    run: async () => api("GET", "/clock"),
+  },
+  {
+    name: "save_records",
+    description:
+      "VARIAS operacoes de uma vez, TUDO OU NADA (se uma falha, nada e gravado): create: [dados...], update: [{id, data}...], delete: [ids...] (delete vai para a lixeira). Ate 200 no total. Ex.: concluir 3 tarefas = update com 3 itens {id, data:{feito:true}}.",
+    inputSchema: {
+      type: "object",
+      properties: { collection: { type: "string" }, create: { type: "array", items: { type: "object" } }, update: { type: "array", items: { type: "object" } }, delete: { type: "array", items: { type: "string" } } },
+      required: ["collection"],
+    },
+    run: (a) => api("POST", `/collections/${enc(String(a.collection))}/records/batch`, { create: a.create, update: a.update, delete: a.delete }),
+  },
+  {
+    name: "list_trash",
+    description: "Registros apagados de uma colecao (ficam 30 dias na lixeira). Restaure com restore_record.",
+    inputSchema: { type: "object", properties: { collection: { type: "string" } }, required: ["collection"] },
+    run: (a) => api("GET", `/collections/${enc(String(a.collection))}/trash`),
+  },
+  {
+    name: "restore_record",
+    description: "Desfaz a exclusao: traz de volta um registro da lixeira (mesmo id, mesmos dados).",
+    inputSchema: { type: "object", properties: { collection: { type: "string" }, recordId: { type: "string" } }, required: ["collection", "recordId"] },
+    run: (a) => api("POST", `/collections/${enc(String(a.collection))}/records/${enc(String(a.recordId))}/restore`),
+  },
+  {
     name: "delete_record",
-    description: "Exclui um registro de uma colecao (so quando o usuario pedir).",
+    description: "Exclui um registro de uma colecao (so quando o usuario pedir). Vai para a lixeira: dá para desfazer com restore_record (30 dias).",
     inputSchema: { type: "object", properties: { collection: { type: "string" }, recordId: { type: "string" } }, required: ["collection", "recordId"] },
     run: (a) => api("DELETE", `/collections/${enc(String(a.collection))}/records/${enc(String(a.recordId))}`),
   },
@@ -366,8 +395,58 @@ const EXTERNAL_TOOLS: ToolDef[] = [
   },
 ];
 
+// Google como DADOS (JSON), sem ler o texto do servidor do Google. Chamam as ferramentas google_* do app (mesma conta ja conectada).
+async function studioTool(name: string, args: Args): Promise<unknown> {
+  return (await api("POST", "/tools/call", { name, args })).result;
+}
+
+const GOOGLE_TOOLS: ToolDef[] = [
+  {
+    name: "google_tasks",
+    description: "Tarefas do Google Tasks como DADOS: { count, tasks: [{ id, title, status: 'open'|'done', due, completedAt }] }. showCompleted=true inclui as concluidas. So leitura.",
+    inputSchema: { type: "object", properties: { showCompleted: { type: "boolean" }, list: { type: "string" } } },
+    run: (a) => studioTool("google_tasks_list", a),
+  },
+  {
+    name: "google_task_set",
+    description: "Conclui (done=true) ou reabre (done=false) tarefas do Google Tasks. Aceita ids: [..] para VARIAS de uma vez. ALTERA a conta do usuario: so quando ele pediu.",
+    inputSchema: { type: "object", properties: { id: { type: "string" }, ids: { type: "array", items: { type: "string" } }, done: { type: "boolean" } }, required: ["done"] },
+    run: async (a) => {
+      const ids = Array.isArray(a.ids) ? a.ids.map(String) : a.id ? [String(a.id)] : [];
+      if (!ids.length) throw new Error("informe id ou ids");
+      const results = [];
+      for (const id of ids) results.push(await studioTool("google_task_set", { id, done: a.done }).catch((e) => ({ ok: false, id, error: String(e instanceof Error ? e.message : e) })));
+      return { results };
+    },
+  },
+  {
+    name: "google_events",
+    description: "Eventos da Agenda do Google como DADOS: { count, events: [{ id, title, start, end, allDay, meet, calendarId }] }. calendar (padrao primary), days (padrao 7) ou from/to (ISO). So leitura.",
+    inputSchema: { type: "object", properties: { calendar: { type: "string" }, days: { type: "number" }, from: { type: "string" }, to: { type: "string" } } },
+    run: (a) => studioTool("google_events_list", a),
+  },
+  {
+    name: "google_calendars",
+    description: "Agendas do Google como DADOS: { calendars: [{ id, name, primary }] }. So leitura.",
+    inputSchema: { type: "object", properties: {} },
+    run: () => studioTool("google_calendars_list", {}),
+  },
+  {
+    name: "sync_google_tasks",
+    description:
+      "Sincroniza as tarefas da Rotina (colecao rotina_tarefas) com o Google Tasks: mesma tarefa nos dois lados e vinculada (sem duplicar), concluir/reabrir num lado vai para o outro, novas de um lado aparecem no outro. Nunca apaga. Sem argumentos: sincroniza agora (ESCREVE no Google). Com enabled/everyMinutes: liga ou desliga a sincronizacao automatica (desligada por padrao).",
+    inputSchema: { type: "object", properties: { enabled: { type: "boolean" }, everyMinutes: { type: "number" }, statusOnly: { type: "boolean" } } },
+    run: async (a) => {
+      if (a.statusOnly) return api("GET", "/sync/google-tasks");
+      if (a.enabled !== undefined || a.everyMinutes !== undefined) return api("PUT", "/sync/google-tasks", { enabled: a.enabled, everyMinutes: a.everyMinutes });
+      return api("POST", "/sync/google-tasks");
+    },
+  },
+];
+
 const TOOLS: ToolDef[] = [
   ...STUDIO_TOOLS,
+  ...GOOGLE_TOOLS,
   ...EXTERNAL_TOOLS,
   {
     name: "canvas_guide",

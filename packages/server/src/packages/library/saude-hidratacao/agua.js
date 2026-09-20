@@ -24,7 +24,9 @@ studio.main(async (ctx) => {
   function proximo(l) {
     if (!l || l.ativo !== true) return null;
     const cada = Number(l.a_cada_min) || 60;
-    let t = (Date.parse(l.ultimo_disparo) || Date.now()) + cada * 60000;
+    // o servidor conta o intervalo a partir do ultimo registro de agua (depois_de): beber adia o proximo aviso
+    const ultimoCopo = registros.length ? Date.parse(registros[registros.length - 1].createdAt) || 0 : 0;
+    let t = Math.max(Date.parse(l.ultimo_disparo) || Date.now(), ultimoCopo) + cada * 60000;
     if (t < Date.now()) t = Date.now();
     const d = new Date(t);
     const [ih, im] = String(l.inicio || '00:00').split(':').map(Number);
@@ -76,7 +78,7 @@ studio.main(async (ctx) => {
 
   async function salvarLembrete(extra) {
     const corpo = Object.assign({
-      chave: CHAVE, titulo: 'Beber água', ativo: $('#l-ativo').checked,
+      chave: CHAVE, titulo: 'Beber água', ativo: $('#l-ativo').checked, depois_de: 'saude_agua',
       a_cada_min: Number($('#l-int').value) || 60, inicio: $('#l-ini').value || '08:00', fim: $('#l-fim').value || '22:00',
       mensagem: $('#l-msg').value.trim() || 'Hora de beber água 💧',
     }, extra || {});

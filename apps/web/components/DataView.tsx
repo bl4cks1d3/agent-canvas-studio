@@ -10,6 +10,8 @@ import {
   deleteRecord,
   listCollections,
   listRecords,
+  listTrash,
+  restoreRecord,
   updateRecord,
   usePolled,
   type CollectionField,
@@ -17,7 +19,7 @@ import {
   type DataRecord,
 } from "@/lib/studio-api";
 
-const TYPE_HELP = "tipos: text, longtext, number, date, boolean, select(a|b|c)";
+const TYPE_HELP = "tipos: text, longtext, number, date, boolean, select(a|b|c), relation(colecao). Preenchimento automático ao criar: =today, =now ou =time (ex.: data: date=today)";
 
 function parseFields(text: string): CollectionField[] {
   return text
@@ -25,10 +27,14 @@ function parseFields(text: string): CollectionField[] {
     .map((l) => l.trim())
     .filter(Boolean)
     .map((line) => {
-      const [name, rawType = "text"] = line.split(":").map((s) => s.trim());
+      const [name, rest = "text"] = line.split(":").map((s) => s.trim());
+      const [rawType, auto] = rest.split("=").map((s) => s.trim());
+      const def: Pick<CollectionField, "default"> = auto === "now" || auto === "today" || auto === "time" ? { default: auto } : {};
       const sel = rawType.match(/^select\((.*)\)$/);
-      if (sel) return { name, type: "select", options: sel[1].split("|").map((o) => o.trim()).filter(Boolean) };
-      return { name, type: rawType as CollectionField["type"] };
+      if (sel) return { name, type: "select", options: sel[1].split("|").map((o) => o.trim()).filter(Boolean) } satisfies CollectionField;
+      const rel = rawType.match(/^relation\((.*)\)$/);
+      if (rel) return { name, type: "relation", collection: rel[1].trim() } satisfies CollectionField;
+      return { name, type: rawType as CollectionField["type"], ...def } satisfies CollectionField;
     });
 }
 
@@ -38,7 +44,31 @@ function display(v: unknown): string {
   return String(v);
 }
 
+/** Texto que identifica um registro para uma pessoa: o primeiro campo de texto preenchido (nome, titulo...). */
+function labelOf(r: DataRecord): string {
+  for (const [k, v] of Object.entries(r)) if (k !== "id" && k !== "createdAt" && k !== "updatedAt" && typeof v === "string" && v.trim()) return v;
+  return r.id.slice(0, 8);
+}
+
+/** Para cada campo "relation": os registros da colecao apontada (id + rotulo), para escolher no formulario e mostrar o nome na tabela. */
+function useRelationOptions(c: CollectionWithCount): Record<string, Array<{ id: string; label: string }>> {
+  const [opts, setOpts] = useState<Record<string, Array<{ id: string; label: string }>>>({});
+  const targets = c.fields.filter((f) => f.type === "relation" && f.collection).map((f) => f.collection as string);
+  const key = targets.join(",");
+  const load = () => {
+    for (const target of new Set(targets)) {
+      listRecords(target, { limit: "500" })
+        .then((rows) => setOpts((prev) => ({ ...prev, [target]: rows.map((r) => ({ id: r.id, label: labelOf(r) })) })))
+        .catch(() => undefined);
+    }
+  };
+  useEffect(load, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  useOnChange(["data"], load, (e) => e.key === undefined || targets.includes(e.key));
+  return Object.fromEntries(c.fields.filter((f) => f.type === "relation" && f.collection).map((f) => [f.name, opts[f.collection as string] ?? []]));
+}
+
 function RecordForm({ c, initial, onSave, onCancel }: { c: CollectionWithCount; initial?: DataRecord; onSave: (body: Record<string, unknown>) => Promise<void>; onCancel: () => void }) {
+  const relations = useRelationOptions(c);
   const [values, setValues] = useState<Record<string, unknown>>(() => Object.fromEntries(c.fields.map((f) => [f.name, initial?.[f.name] ?? (f.type === "boolean" ? false : "")])));
   const [error, setError] = useState("");
   return (
@@ -54,6 +84,15 @@ function RecordForm({ c, initial, onSave, onCancel }: { c: CollectionWithCount; 
               <option value="" />
               {(f.options ?? []).map((o) => (
                 <option key={o}>{o}</option>
+              ))}
+            </select>
+          ) : f.type === "relation" ? (
+            <select className="input" value={String(values[f.name] ?? "")} onChange={(e) => setValues({ ...values, [f.name]: e.target.value })}>
+              <option value="" />
+              {(relations[f.name] ?? []).map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.label}
+                </option>
               ))}
             </select>
           ) : f.type === "longtext" ? (
@@ -82,13 +121,23 @@ function RecordForm({ c, initial, onSave, onCancel }: { c: CollectionWithCount; 
 }
 
 function Records({ c, onChanged }: { c: CollectionWithCount; onChanged: () => void }) {
+  const relations = useRelationOptions(c);
+  const [trash, setTrash] = useState<Array<DataRecord & { deletedAt: string }> | null>(null);
   const [rows, setRows] = useState<DataRecord[] | null>(null);
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState<DataRecord | "new" | null>(null);
   const [error, setError] = useState("");
 
+  async function loadTrash() {
+    try {
+      setTrash(await listTrash(c.name));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }
   async function load() {
     try {
+      if (trash) void loadTrash();
       setRows(await listRecords(c.name, { limit: "200", ...(q ? { q } : {}) }));
       setError("");
     } catch (e) {
@@ -117,11 +166,29 @@ function Records({ c, onChanged }: { c: CollectionWithCount; onChanged: () => vo
         <button className="btn btn-primary" onClick={() => setEditing("new")}>
           <Icon name="plus" size={13} /> Registro
         </button>
+        <button className="btn" title="Registros apagados (30 dias): dá para restaurar" onClick={() => (trash ? setTrash(null) : void loadTrash())}>
+          <Icon name="trash" size={13} /> Lixeira
+        </button>
         <button className="btn btn-danger" onClick={() => window.confirm(`Excluir a coleção "${c.label}" e todos os registros?`) && void deleteCollection(c.name).then(onChanged).catch((e) => setError(String(e)))}>
           <Icon name="trash" size={13} />
         </button>
       </div>
       {error && <div className="err">{error}</div>}
+      {trash && (
+        <div className="conn">
+          <strong>Lixeira</strong> <span className="help">apagados nos últimos 30 dias</span>
+          {trash.length === 0 && <div className="empty">Vazia.</div>}
+          {trash.map((r) => (
+            <div key={r.id} className="row-item" style={{ cursor: "default" }}>
+              <span className="grow">{labelOf(r)}</span>
+              <span className="help">{new Date(r.deletedAt).toLocaleString("pt-BR")}</span>
+              <button className="btn" onClick={() => void restoreRecord(c.name, r.id).then(() => (onChanged(), load(), loadTrash())).catch((e) => setError(String(e)))}>
+                restaurar
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
       {editing && (
         <RecordForm
           c={c}
@@ -150,7 +217,7 @@ function Records({ c, onChanged }: { c: CollectionWithCount; onChanged: () => vo
             {(rows ?? []).map((r) => (
               <tr key={r.id}>
                 {c.fields.map((f) => (
-                  <td key={f.name}>{display(r[f.name])}</td>
+                  <td key={f.name}>{f.type === "relation" ? ((relations[f.name] ?? []).find((o) => o.id === r[f.name])?.label ?? display(r[f.name])) : display(r[f.name])}</td>
                 ))}
                 <td style={{ whiteSpace: "nowrap" }}>
                   <button className="btn" onClick={() => setEditing(r)}>

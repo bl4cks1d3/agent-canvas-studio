@@ -15,6 +15,7 @@ const FIELDS = [
   { name: "inicio", type: "text", label: "Início (HH:MM)" },
   { name: "fim", type: "text", label: "Fim (HH:MM)" },
   { name: "canvas_id", type: "text", label: "Orquestração a executar (id do canvas)" },
+  { name: "depois_de", type: "text", label: "Contar o intervalo a partir do último registro desta coleção (ex.: saude_agua)" },
   { name: "ultimo_disparo", type: "text", label: "Último disparo (controlado pelo servidor)" },
 ];
 
@@ -33,6 +34,16 @@ export function inWindow(now: Date, inicio: unknown, fim: unknown): boolean {
   const a = minutesOf(inicio, 0);
   const b = minutesOf(fim, 23 * 60 + 59);
   return a <= b ? cur >= a && cur <= b : cur >= a || cur <= b;
+}
+
+/** Registro mais recente de uma colecao (UTC, em ms) ou 0: quem bebeu agua ha 5 min nao precisa do lembrete de agua agora. */
+function latestRecordMs(data: DataService, collection: string): number {
+  try {
+    const [newest] = data.listRecords(collection, { sort: "createdAt", order: "desc", limit: "1" });
+    return newest ? Date.parse(newest.createdAt) || 0 : 0;
+  } catch {
+    return 0; // colecao inexistente: ignora, o lembrete segue no relogio normal
+  }
 }
 
 /**
@@ -55,8 +66,20 @@ export class RemindersService implements OnModuleInit, OnModuleDestroy {
     if (!this.data.listCollections().some((c) => c.name === REMINDERS_COLLECTION)) {
       this.data.createCollection({ name: REMINDERS_COLLECTION, label: "Lembretes", description: "Lembretes recorrentes por notificação (o servidor dispara na hora certa).", fields: FIELDS });
     }
+    this.addMissingFields();
     this.timer = setInterval(() => this.tick(), TICK_MS);
     this.timer.unref();
+  }
+
+  /** Colecao criada por uma versao anterior: acrescenta os campos novos (so soma, nunca mexe nos existentes nem nos registros). */
+  private addMissingFields(): void {
+    try {
+      const current = this.data.getCollection(REMINDERS_COLLECTION);
+      const missing = FIELDS.filter((f) => !current.fields.some((x) => x.name === f.name));
+      if (missing.length) this.data.updateCollection(REMINDERS_COLLECTION, { fields: [...current.fields, ...missing] });
+    } catch (err) {
+      this.logger.warn(`lembretes: ${err instanceof Error ? err.message : err}`);
+    }
   }
 
   onModuleDestroy(): void {
@@ -82,7 +105,10 @@ export class RemindersService implements OnModuleInit, OnModuleDestroy {
           this.data.updateRecord(REMINDERS_COLLECTION, r.id, { ultimo_disparo: now.toISOString() });
           continue;
         }
-        if (now.getTime() - last < every * 60_000) continue;
+        // "depois_de": beber agua (ou qualquer registro da colecao) adia o proximo aviso; o intervalo conta do registro mais recente
+        const after = String(r.depois_de ?? "").trim();
+        const reference = after ? Math.max(last, latestRecordMs(this.data, after)) : last;
+        if (now.getTime() - reference < every * 60_000) continue;
         this.data.updateRecord(REMINDERS_COLLECTION, r.id, { ultimo_disparo: now.toISOString() });
         this.fire(r);
         fired++;

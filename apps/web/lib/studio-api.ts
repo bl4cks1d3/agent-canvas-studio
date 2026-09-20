@@ -21,7 +21,10 @@ export const listRecords = (name: string, params: Record<string, string> = {}) =
 };
 export const createRecord = (name: string, body: Record<string, unknown>) => api<DataRecord>(`/collections/${name}/records`, { method: "POST", body: JSON.stringify(body) });
 export const updateRecord = (name: string, id: string, body: Record<string, unknown>) => api<DataRecord>(`/collections/${name}/records/${id}`, { method: "PATCH", body: JSON.stringify(body) });
-export const deleteRecord = (name: string, id: string) => api<{ ok: true }>(`/collections/${name}/records/${id}`, { method: "DELETE" });
+export const deleteRecord = (name: string, id: string) => api<{ ok: true; trashed: boolean }>(`/collections/${name}/records/${id}`, { method: "DELETE" });
+/** Registros apagados (ficam 30 dias na lixeira). */
+export const listTrash = (name: string) => api<Array<DataRecord & { deletedAt: string }>>(`/collections/${name}/trash`);
+export const restoreRecord = (name: string, id: string) => api<DataRecord>(`/collections/${name}/records/${id}/restore`, { method: "POST" });
 
 // ------------------------------------------------------------------ componentes
 export const listBlocks = () => api<Block[]>("/blocks");

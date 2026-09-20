@@ -5,6 +5,7 @@ import { DataService } from "../data/data.service";
 import type { ToolDef } from "../llm/providers";
 import { LEVELS, NotificationsService } from "../notifications/notifications.service";
 import { BUILTIN_TOOLS, type BuiltinTool } from "./builtin";
+import { googleTools } from "./google-tools";
 import { McpManager } from "./mcp-manager";
 
 /** Leitura pura de servidores MCP (nome comeca com list/get/read/search/find/describe/show/count): roda ate na simulacao. */
@@ -44,6 +45,7 @@ export class ToolRegistry {
 
   private studioTools(): BuiltinTool[] {
     return [
+      ...googleTools(this.mcp, () => this.list()),
       {
         name: "notify",
         description:
@@ -83,7 +85,7 @@ export class ToolRegistry {
       },
       {
         name: "save_collection",
-        description: "Cria a colecao (tabela) ou atualiza o esquema se ja existir. fields: [{name, type: text|longtext|number|date|boolean|select, label?, required?, options?}].",
+        description: "Cria a colecao (tabela) ou atualiza o esquema se ja existir. fields: [{name, type: text|longtext|number|date|boolean|select|relation, label?, required?, options? (select), collection? (relation: colecao apontada), default? (now|today|time: preenche sozinho ao criar)}].",
         parameters: obj({ name: { type: "string" }, label: { type: "string" }, description: { type: "string" }, fields: { type: "array", items: { type: "object" } } }, ["name"]),
         readOnly: false,
         run: async (a) => {

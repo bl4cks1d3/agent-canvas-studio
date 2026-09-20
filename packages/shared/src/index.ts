@@ -134,7 +134,10 @@ export interface Catalog {
 // Studio: banco (colecoes), componentes visuais (blocos) e pacotes
 // ---------------------------------------------------------------------------
 
-export type CollectionFieldType = "text" | "longtext" | "number" | "date" | "boolean" | "select";
+export type CollectionFieldType = "text" | "longtext" | "number" | "date" | "boolean" | "select" | "relation";
+
+/** Preenchimento automatico ao CRIAR o registro (no fuso local): now = data e hora com fuso, today = AAAA-MM-DD, time = HH:MM. */
+export type FieldDefault = "now" | "today" | "time";
 
 export interface CollectionField {
   name: string;
@@ -142,6 +145,10 @@ export interface CollectionField {
   type: CollectionFieldType;
   required?: boolean;
   options?: string[];
+  /** So em "relation": nome da colecao cujo registro (id) este campo aponta. O servidor recusa um id que nao existe. */
+  collection?: string;
+  /** Vazio na criacao = o servidor preenche com a data/hora atual (so em date e text). */
+  default?: FieldDefault;
 }
 
 export interface Collection {

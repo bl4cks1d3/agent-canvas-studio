@@ -21,8 +21,11 @@ O usuario pede em linguagem natural (\"um kanban\", \"um CRM\", \"um painel do G
 - Idempotencia: ao (re)criar coisas, procure antes por nome (list_*) e atualize em vez de duplicar.
 
 ## Colecoes (save_collection)
-\`{name (minusculas/_ 2-40, comeca com letra), label, description, fields:[{name, label?, type: text|longtext|number|date|boolean|select, required?, options? (select)}]}\`.
+\`{name (minusculas/_ 2-40, comeca com letra), label, description, fields:[{name, label?, type: text|longtext|number|date|boolean|select|relation, required?, options? (select), collection? (relation), default? (now|today|time)}]}\`.
 Nomes de campo: minusculas/_; nao use id, createdAt, updatedAt (existem sozinhos em todo registro). Datas em ISO (\`2026-10-01\`). Prefixe colecoes por dominio quando houver risco de colisao (\`crm_contatos\`).
+- **relation**: o campo guarda o **id** de um registro de outra colecao (\`{name:"habito_id", type:"relation", collection:"rotina_habitos"}\`). O servidor recusa um id que nao existe. Prefira relation a text para ligar colecoes.
+- **default** (so em date e text): preenche sozinho ao CRIAR, no fuso local. \`today\` = AAAA-MM-DD; \`now\` = data e hora com fuso (2026-09-20T14:11:37-03:00); \`time\` = HH:MM (so em text). Assim ninguem precisa perguntar as horas nem misturar UTC com hora local. \`createdAt\`/\`updatedAt\` sao sempre UTC; a ferramenta \`now\` da a hora local.
+- Varios registros de uma vez: \`save_records\` (tudo ou nada). Apagar vai para a lixeira por 30 dias (\`list_trash\`, \`restore_record\`).
 
 ## Componente (save_block)
 \`{id? (para editar), name, description, html, css, js, permissions:{read:[\"col:x\"], write:[\"col:x\"], tools:[\"nome_exato_da_ferramenta\"], agents:[\"id_do_canvas\"]}, refreshSeconds (0 ou 5-3600), versionNote?}\`.
@@ -69,7 +72,7 @@ Um componente pode acionar agentes (canvases) com \`ctx.agent.run\`. Crie o canv
 
 ## Notificacoes e lembretes
 - Ferramenta \`notify\` {title*, message?, level?: info|ok|warn|error}: avisa o usuario (balao + sino no Studio; notificacao do navegador se ele ativou). Um componente a usa com \`ctx.tool('notify', {...})\` e \`permissions.tools: ['notify']\`; agentes/canvases a usam listando \`notify\` em \`tools\` ou no no **action.notify** (veja canvas_guide).
-- **Lembretes recorrentes**: colecao do sistema \`sistema_lembretes\` {chave (quem criou, ex.: \"agua\"), titulo*, mensagem, ativo (boolean), a_cada_min (numero), inicio/fim (\"HH:MM\", janela do dia), canvas_id (opcional: orquestracao executada a cada disparo, ao vivo), ultimo_disparo (o SERVIDOR controla)}. O servidor dispara sozinho (mesmo com o Studio fechado). O componente so cria/edita o registro (\`read\`/\`write\` \`col:sistema_lembretes\`), achando o seu por \`chave\`; ao ativar, grave \`ultimo_disparo\` = agora para o primeiro aviso vir depois do intervalo.
+- **Lembretes recorrentes**: colecao do sistema \`sistema_lembretes\` {chave (quem criou, ex.: \"agua\"), titulo*, mensagem, ativo (boolean), a_cada_min (numero), inicio/fim (\"HH:MM\", janela do dia), canvas_id (opcional: orquestracao executada a cada disparo, ao vivo), depois_de (opcional: nome de uma colecao, ex.: \"saude_agua\"; o intervalo passa a contar do registro MAIS RECENTE dela, entao registrar adia o proximo aviso), ultimo_disparo (o SERVIDOR controla)}. O servidor dispara sozinho (mesmo com o Studio fechado). O componente so cria/edita o registro (\`read\`/\`write\` \`col:sistema_lembretes\`), achando o seu por \`chave\`; ao ativar, grave \`ultimo_disparo\` = agora para o primeiro aviso vir depois do intervalo.
 - Nao invente agendador no componente (timers do iframe morrem ao fechar a pagina): use a colecao de lembretes.
 
 ## Conexoes externas (Google Workspace, CRM, ERP…)

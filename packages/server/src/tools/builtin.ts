@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, relative, resolve, sep } from "node:path";
+import { clock } from "../clock";
 import { dataDir } from "../db";
 
 export interface BuiltinTool {
@@ -24,12 +25,12 @@ function safePath(p: unknown): string {
 export const BUILTIN_TOOLS: BuiltinTool[] = [
   {
     name: "get_time",
-    description: "Data e hora atuais (local) e dia da semana.",
+    description: "Data e hora atuais no fuso LOCAL do usuario: local (com fuso), date (AAAA-MM-DD), time (HH:MM), dia da semana e fuso. Use isto em vez de adivinhar a hora.",
     parameters: { type: "object", properties: {} },
     readOnly: true,
     run: async () => {
-      const d = new Date();
-      return { iso: d.toISOString(), local: d.toLocaleString("pt-BR", { dateStyle: "full", timeStyle: "short" }), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone };
+      const c = clock();
+      return { ...c, iso: c.utc };
     },
   },
   {

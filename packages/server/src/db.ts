@@ -153,6 +153,17 @@ CREATE TABLE IF NOT EXISTS notifications (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications (created_at);
+
+-- lixeira de registros: apagar nao e definitivo (da para restaurar por 30 dias); guarda o registro como estava
+CREATE TABLE IF NOT EXISTS record_trash (
+  id TEXT PRIMARY KEY,
+  collection_name TEXT NOT NULL,
+  data TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  deleted_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_record_trash_col ON record_trash (collection_name, deleted_at);
 `;
 
 export function openDatabase(): DatabaseSync {

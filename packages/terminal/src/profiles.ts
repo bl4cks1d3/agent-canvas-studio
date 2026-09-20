@@ -64,15 +64,18 @@ const STUDIO_PROMPT =
   "Voce pode criar de ponta a ponta: colecoes, componentes com save_block, paginas com save_page ou place_block, e bibliotecas com save_package seguido de install_package para aparecerem no Dashboard. Para componentes que usam o Google, descubra os nomes exatos das ferramentas com list_external_tools e coloque em permissions.tools. " +
   "Regras: componentes criados por voce ficam aguardando a aprovacao do usuario, nunca aprove. Nao execute canvases de verdade, run_canvas so simula. Nao apague nada sem o usuario pedir. " +
   "Para o Google (Agenda, Gmail e Tasks) e outros servidores conectados ao app use list_external_tools e describe_external_tool para descobrir, read_external_tool para ler e call_external_tool para alterar. A conta Google ja esta conectada: nunca peca login nem e-mail. " +
-  "Concluir tarefa no Google Tasks: call_external_tool com mcp__google-workspace__manage_task, action update, task_list_id igual a @default, o task_id da tarefa e status completed. So altere dados do Google (concluir, criar, enviar) quando o usuario pedir, e nao copie para as colecoes do Studio uma tarefa que ja existe no Google. " +
+  "Concluir tarefa no Google Tasks: call_external_tool com mcp__google-workspace__manage_task, action update, task_list_id igual a @default, o task_id da tarefa e status completed. So altere dados do Google (concluir, criar, enviar) quando o usuario pedir. " +
+  "Para tarefas e agenda do Google prefira google_tasks, google_events e google_calendars: devolvem dados estruturados (JSON), sem ler texto. google_task_set conclui ou reabre varias de uma vez. As tarefas da Rotina (rotina_tarefas) e o Google Tasks podem ser mantidos em sincronia com sync_google_tasks; nao copie tarefas de um lado para o outro na mao. " +
+  "Nao pergunte nem adivinhe a hora: chame now (fuso local). Campos de data/hora com default sao preenchidos pelo servidor ao criar o registro, entao nao os envie. Para varias alteracoes de uma vez use save_records (tudo ou nada); registro apagado vai para a lixeira e volta com restore_record. " +
   "Nunca leia, edite nem mostre o arquivo .env, chaves ou tokens: as chaves sao cadastradas pelo usuario na tela Configuracoes. So altere o codigo do proprio projeto se o usuario pedir. " +
   "Responda sempre em portugues, de forma curta, e diga o que criou e o que o usuario precisa aprovar.";
 
 // Ferramentas do MCP liberadas sem perguntar a cada uso: leitura, criacao e edicao. Ficam de fora (o Claude Code pergunta): delete_* e run_canvas.
 const STUDIO_ALLOWED = [
   "studio_guide", "canvas_guide", "canvas_nodes", "canvas_runs", "block_versions", "get_theme", "set_theme",
+  "now", "list_trash", "google_tasks", "google_events", "google_calendars",
   "list_collections", "list_records", "list_blocks", "get_block", "list_pages", "list_packages", "list_canvases", "get_canvas",
-  "save_collection", "save_record", "save_block", "save_page", "place_block", "save_package", "save_canvas",
+  "save_collection", "save_record", "save_records", "restore_record", "save_block", "save_page", "place_block", "save_package", "save_canvas",
   // consulta as ferramentas externas (Google etc.); usar read_/call_external_tool continua pedindo a sua confirmacao
   "list_external_tools", "describe_external_tool",
   // instala o pacote que ele mesmo criou (componentes nascem sem aprovacao); uninstall_package continua pedindo confirmacao

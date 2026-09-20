@@ -14,7 +14,13 @@ Pacote = coleções + componentes + canvases + páginas + conexões pedidas
 
 ## Coleções (banco sob medida)
 
-`POST /collections` `{name, label, fields:[{name, type, required?, options?}]}`. Tipos: `text`, `longtext`, `number`, `date`, `boolean`, `select`. Registros são validados contra o esquema (número convertido, select restrito, obrigatórios). Campos `id`, `createdAt`, `updatedAt` existem em todo registro. Enviar `null` num campo o limpa. Limites: 40 campos, 10 000 registros por coleção.
+`POST /collections` `{name, label, fields:[{name, type, required?, options?, collection?, default?}]}`. Tipos: `text`, `longtext`, `number`, `date`, `boolean`, `select`, `relation`. Registros são validados contra o esquema (número convertido, select restrito, obrigatórios). **`relation`** (`collection: "outra"`) guarda o id de um registro de outra coleção e o servidor recusa um id que não existe. **`default`** (`today`, `now` ou `time`, só em `date`/`text`) preenche sozinho ao criar, no fuso local da máquina; `createdAt`/`updatedAt` continuam em UTC e `GET /clock` (ferramenta MCP `now`) dá a hora local.
+
+**Lote e lixeira.** `POST /collections/:nome/records/batch` `{create:[…], update:[{id,data}], delete:[ids]}` é tudo ou nada (até 200). Apagar um registro o manda para a lixeira por 30 dias: `GET /collections/:nome/trash` e `POST /collections/:nome/records/:id/restore` (na tela: botão *Lixeira* em Dados).
+
+**Lembretes ligados a registros.** Em `sistema_lembretes`, `depois_de: "saude_agua"` faz o intervalo contar do registro mais recente daquela coleção: beber água adia o próximo aviso.
+
+**Google como dados e tarefas em sincronia.** As ferramentas `google_tasks_list`, `google_task_set`, `google_task_create`, `google_events_list` e `google_calendars_list` devolvem JSON (no MCP: `google_tasks`, `google_task_set`, `google_events`, `google_calendars`). `POST /sync/google-tasks` (MCP `sync_google_tasks`) sincroniza `rotina_tarefas` com o Google Tasks: a mesma tarefa nos dois lados é vinculada por título (sem duplicar), concluir ou reabrir de um lado vai para o outro e nada é apagado. A sincronização automática vem desligada: `PUT /sync/google-tasks` `{enabled:true, everyMinutes:10}`. Campos `id`, `createdAt`, `updatedAt` existem em todo registro. Enviar `null` num campo o limpa. Limites: 40 campos, 10 000 registros por coleção.
 
 ## Componentes
 
@@ -74,4 +80,4 @@ Pasta `packages/server/src/packages/library/<id>/` com `manifest.json` + arquivo
 
 ## MCP (`packages/mcp`)
 
-Ferramentas: `studio_guide`, `list_collections`, `save_collection`, `list_records`, `save_record`, `delete_record`, `list_blocks`, `get_block`, `save_block`, `delete_block`, `block_versions`, `list_pages`, `save_page`, `place_block`, `delete_page`, `list_packages`, `save_package`, `get_theme`, `set_theme`, além das de orquestração (`canvas_guide`, `canvas_nodes`, `list_canvases`, `get_canvas`, `save_canvas`, `run_canvas` — só simulação —, `canvas_runs`, `delete_canvas`). Prompts: `construir-dashboard`, `construir-canvas`. Recursos: `studio://guia`, `canvas://guia`.
+Ferramentas: `studio_guide`, `now`, `list_collections`, `save_collection`, `list_records`, `save_record`, `save_records`, `delete_record`, `list_trash`, `restore_record`, `google_tasks`, `google_task_set`, `google_events`, `google_calendars`, `sync_google_tasks`, `list_blocks`, `get_block`, `save_block`, `delete_block`, `block_versions`, `list_pages`, `save_page`, `place_block`, `delete_page`, `list_packages`, `save_package`, `get_theme`, `set_theme`, além das de orquestração (`canvas_guide`, `canvas_nodes`, `list_canvases`, `get_canvas`, `save_canvas`, `run_canvas` — só simulação —, `canvas_runs`, `delete_canvas`). Prompts: `construir-dashboard`, `construir-canvas`. Recursos: `studio://guia`, `canvas://guia`.

@@ -422,6 +422,94 @@ try {
     check("eventos: salvar tema avisa {theme}", await wait((e) => e.type === "theme"), msg(r));
     ac.abort();
   }
+
+  // ------------------------------------------------------------ relacao, data/hora automaticas, lote, lixeira e relogio
+  {
+    r = await call("GET", "/clock");
+    check("relogio: fuso local com data, hora e deslocamento", r.status === 200 && /^\d{4}-\d{2}-\d{2}$/.test(r.json?.date) && /^\d{2}:\d{2}$/.test(r.json?.time) && /[+-]\d{2}:\d{2}$/.test(r.json?.local) && typeof r.json?.timezone === "string", JSON.stringify(r.json));
+    const hoje = r.json.date;
+
+    r = await call("POST", "/collections", { name: "zz_pais", label: "ZZ pais", fields: [{ name: "nome", type: "text", required: true }] });
+    cleanup.collections.push("zz_pais");
+    r = await call("POST", "/collections", {
+      name: "zz_filhos",
+      label: "ZZ filhos",
+      fields: [
+        { name: "pai_id", type: "relation", collection: "zz_pais", required: true },
+        { name: "dia", type: "date", default: "today" },
+        { name: "hora", type: "text", default: "time" },
+        { name: "quando", type: "date", default: "now" },
+        { name: "qtd", type: "number" },
+      ],
+    });
+    cleanup.collections.push("zz_filhos");
+    check("colecao com relation, default today/time/now", r.status === 201 && r.json?.fields?.[0]?.collection === "zz_pais" && r.json?.fields?.[2]?.default === "time", msg(r));
+    r = await call("POST", "/collections", { name: "zz_ruim1", fields: [{ name: "x", type: "relation" }] });
+    check("relation sem collection -> 400", r.status === 400, msg(r));
+    r = await call("POST", "/collections", { name: "zz_ruim2", fields: [{ name: "x", type: "number", default: "today" }] });
+    check("default em campo number -> 400", r.status === 400, msg(r));
+    r = await call("POST", "/collections", { name: "zz_ruim3", fields: [{ name: "x", type: "date", default: "time" }] });
+    check("default time em campo date -> 400", r.status === 400, msg(r));
+
+    const pai = (await call("POST", "/collections/zz_pais/records", { nome: "Pai" })).json;
+    r = await call("POST", "/collections/zz_filhos/records", { pai_id: "id-que-nao-existe" });
+    check("relation: id que nao existe e recusado com aviso claro", r.status === 400 && /nao existe registro/.test(msg(r)) && /zz_pais/.test(msg(r)), msg(r));
+    r = await call("POST", "/collections/zz_filhos/records", { pai_id: pai.id });
+    const filho = r.json;
+    check("relation: id valido passa", r.status === 201 && filho?.pai_id === pai.id, msg(r));
+    check("default: data, hora e data-hora preenchidas sozinhas no fuso local", filho?.dia === hoje && /^\d{2}:\d{2}$/.test(filho?.hora) && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/.test(filho?.quando), JSON.stringify(filho));
+    r = await call("POST", "/collections/zz_filhos/records", { pai_id: pai.id, dia: "2020-01-02", hora: "07:30" });
+    check("default: o que o chamador informa nao e sobrescrito", r.json?.dia === "2020-01-02" && r.json?.hora === "07:30", JSON.stringify(r.json));
+    r = await call("PATCH", `/collections/zz_filhos/records/${filho.id}`, { pai_id: "outro-id-errado" });
+    check("relation: editar para id inexistente tambem e recusado", r.status === 400, msg(r));
+
+    // lote: tudo ou nada
+    r = await call("POST", "/collections/zz_filhos/records/batch", { create: [{ pai_id: pai.id, qtd: 1 }, { pai_id: pai.id, qtd: 2 }], update: [{ id: filho.id, data: { qtd: 9 } }] });
+    check("lote: cria 2 e atualiza 1 de uma vez", r.status === 201 && r.json?.created?.length === 2 && r.json?.updated?.[0]?.qtd === 9, msg(r));
+    const antes = (await call("GET", "/collections/zz_filhos/records")).json.length;
+    r = await call("POST", "/collections/zz_filhos/records/batch", { create: [{ pai_id: pai.id, qtd: 5 }, { pai_id: "errado" }], delete: [filho.id] });
+    const depois = (await call("GET", "/collections/zz_filhos/records")).json;
+    check("lote: uma operacao invalida => 400 e NADA e gravado (nem o apagar)", r.status === 400 && depois.length === antes && depois.some((x) => x.id === filho.id), `${antes} -> ${depois.length}; ${msg(r)}`);
+    r = await call("POST", "/collections/zz_filhos/records/batch", {});
+    check("lote vazio -> 400", r.status === 400);
+
+    // lixeira
+    r = await call("DELETE", `/collections/zz_filhos/records/${filho.id}`);
+    check("apagar registro manda para a lixeira", r.status === 200 && r.json?.trashed === true, msg(r));
+    check("registro apagado sumiu da lista", !(await call("GET", "/collections/zz_filhos/records")).json.some((x) => x.id === filho.id));
+    r = await call("GET", "/collections/zz_filhos/trash");
+    check("lixeira lista o registro apagado com a data", r.json?.some((x) => x.id === filho.id && x.qtd === 9 && x.deletedAt), JSON.stringify(r.json?.[0]));
+    r = await call("POST", `/collections/zz_filhos/records/${filho.id}/restore`);
+    check("restaurar volta o registro com o mesmo id e dados", r.status === 201 && r.json?.id === filho.id && r.json?.qtd === 9 && r.json?.pai_id === pai.id, msg(r));
+    check("restaurado sai da lixeira", !(await call("GET", "/collections/zz_filhos/trash")).json.some((x) => x.id === filho.id));
+    r = await call("POST", `/collections/zz_filhos/records/${filho.id}/restore`);
+    check("restaurar de novo -> 404", r.status === 404);
+    r = await call("POST", "/collections/zz_filhos/records/batch", { delete: [filho.id] });
+    check("lote: delete tambem vai para a lixeira", r.status === 201 && r.json?.deleted?.[0] === filho.id && (await call("GET", "/collections/zz_filhos/trash")).json.some((x) => x.id === filho.id));
+
+    // lembrete que espera o registro mais recente de uma colecao (depois_de)
+    await call("POST", "/collections", { name: "zz_copos", label: "ZZ copos", fields: [{ name: "t", type: "text" }] });
+    cleanup.collections.push("zz_copos");
+    await call("POST", "/collections/zz_copos/records", { t: "acabei de beber" });
+    const velho = new Date(Date.now() - 10 * 60_000).toISOString();
+    const corpo = { titulo: "ZZ lembrete", ativo: true, a_cada_min: 1, ultimo_disparo: velho };
+    const comRegra = (await call("POST", "/collections/sistema_lembretes/records", { ...corpo, chave: "zz_com", depois_de: "zz_copos" })).json;
+    const semRegra = (await call("POST", "/collections/sistema_lembretes/records", { ...corpo, chave: "zz_sem" })).json;
+    let disparou = false;
+    for (let i = 0; i < 24 && !disparou; i++) {
+      await new Promise((ok) => setTimeout(ok, 1000));
+      disparou = (await call("GET", `/collections/sistema_lembretes/records?chave=zz_sem`)).json?.[0]?.ultimo_disparo !== velho;
+    }
+    check("lembrete sem depois_de dispara normalmente (controle)", disparou);
+    const ainda = (await call("GET", `/collections/sistema_lembretes/records?chave=zz_com`)).json?.[0];
+    check("lembrete com depois_de NAO dispara (houve registro ha segundos): o intervalo conta do registro", ainda?.ultimo_disparo === velho, ainda?.ultimo_disparo);
+    for (const rec of [comRegra, semRegra]) {
+      if (!rec?.id) continue;
+      await call("DELETE", `/collections/sistema_lembretes/records/${rec.id}`);
+      await call("DELETE", `/collections/sistema_lembretes/trash/${rec.id}`); // o teste nao deixa nem rastro na lixeira
+    }
+    for (const n of (await call("GET", "/notifications?limit=200")).json ?? []) if (/^ZZ lembrete/.test(n.title)) await call("DELETE", `/notifications/${n.id}`);
+  }
 } finally {
   await call("DELETE", "/integrations/keys/ZZ_TEST_TOKEN");
   for (const id of cleanup.notifications) await call("DELETE", `/notifications/${id}`);

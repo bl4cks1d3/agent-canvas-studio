@@ -3,7 +3,7 @@
   "name": "Saúde: Hidratação",
   "description": "Contador de água com meta diária, histórico de 7 dias e lembrete recorrente por notificação (o servidor avisa mesmo com o Studio fechado).",
   "category": "saúde",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "requires": [],
   "collections": [
     {
@@ -15,7 +15,8 @@
           "name": "data",
           "type": "date",
           "label": "Data",
-          "required": true
+          "required": true,
+          "default": "today"
         },
         {
           "name": "ml",
@@ -26,7 +27,8 @@
         {
           "name": "hora",
           "type": "text",
-          "label": "Hora (HH:MM)"
+          "label": "Hora (HH:MM)",
+          "default": "time"
         }
       ]
     }

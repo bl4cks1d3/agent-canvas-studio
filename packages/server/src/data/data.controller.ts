@@ -43,6 +43,34 @@ export class DataController {
     return this.data.createRecord(name, body ?? {});
   }
 
+  /** Varias operacoes de uma vez, tudo ou nada: { create: [...], update: [{id, data}], delete: [ids] }. */
+  @Post(":name/records/batch")
+  batch(@Param("name") name: string, @Body() body: Body_) {
+    return this.data.batchRecords(name, body ?? {});
+  }
+
+  /** Registros apagados (30 dias). */
+  @Get(":name/trash")
+  trash(@Param("name") name: string) {
+    return this.data.listTrash(name);
+  }
+
+  /** Esvazia a lixeira da colecao (irreversivel). */
+  @Delete(":name/trash")
+  purgeAll(@Param("name") name: string) {
+    return this.data.purgeTrash(name);
+  }
+
+  @Delete(":name/trash/:id")
+  purgeOne(@Param("name") name: string, @Param("id") id: string) {
+    return this.data.purgeTrash(name, id);
+  }
+
+  @Post(":name/records/:id/restore")
+  restoreRecord(@Param("name") name: string, @Param("id") id: string) {
+    return this.data.restoreRecord(name, id);
+  }
+
   @Patch(":name/records/:id")
   updateRecord(@Param("name") name: string, @Param("id") id: string, @Body() body: Body_) {
     return this.data.updateRecord(name, id, body ?? {});
