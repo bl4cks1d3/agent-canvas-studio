@@ -92,8 +92,8 @@ function Editor({ id, catalog, run, remoteUpdatedAt, onDeleted, onSelectNode, se
   const nameRef = useRef(name);
   nameRef.current = name;
 
-  const blocksQ = usePolled(listBlocks, 5000);
-  const collectionsQ = usePolled(listCollections, 8000);
+  const blocksQ = usePolled(listBlocks, 10_000, ["blocks"]);
+  const collectionsQ = usePolled(listCollections, 15_000, ["data"]);
   const blockMap = useMemo(() => new Map((blocksQ.data ?? []).map((b) => [b.id, b])), [blocksQ.data]);
 
   const specs = useMemo(() => new Map((catalog?.nodes ?? []).map((s) => [s.type, s])), [catalog]);

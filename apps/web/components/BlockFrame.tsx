@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { runBridgeCall, useStudioTheme, type BlockPermissions } from "@/lib/studio-api";
 import { buildSrcDoc, newNonce } from "@/lib/block-runtime";
+import { useOnChange } from "@/lib/changes";
 import { useTheme } from "@/lib/theme";
 
 export interface FrameBlock {
@@ -260,6 +261,20 @@ export default function BlockFrame({ block, reloadKey = 0, onLog, depth = 0, onC
     }, block.refreshSeconds * 1000);
     return () => clearInterval(timer);
   }, [runnable, block.refreshSeconds, nonce]);
+
+  // Claude/agente mudou uma colecao que este componente le (ou a caixa de entrada dele): roda `main` de novo na hora.
+  // O intervalo minimo evita laco se o proprio componente grava a cada execucao.
+  const lastPush = useRef(0);
+  useOnChange(
+    ["data", "blocks"],
+    () => {
+      if (!runnable || Date.now() - lastPush.current < 2000) return;
+      lastPush.current = Date.now();
+      frameRef.current?.contentWindow?.postMessage({ __ac: 1, type: "refresh" }, "*");
+    },
+    (c) => (c.type === "data" ? c.key === undefined || block.permissions.read.includes(`col:${c.key}`) : c.key === block.id),
+    250
+  );
 
   // Esc fecha o modal/confirmacao do topo
   useEffect(() => {

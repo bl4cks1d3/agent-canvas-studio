@@ -37,7 +37,7 @@ export default function DashboardView({ pageId, remoteUpdatedAt, focus, onToggle
   const [error, setError] = useState("");
   const [external, setExternal] = useState(false);
   const [width, setWidth] = useState(0);
-  const blocks = usePolled(listBlocks, 5000);
+  const blocks = usePolled(listBlocks, 10_000, ["blocks"]);
   const wrapRef = useRef<HTMLDivElement>(null);
   const dirty = useRef(false);
   const base = useRef("");

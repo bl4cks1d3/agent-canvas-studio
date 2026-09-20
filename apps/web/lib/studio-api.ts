@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Block, BlockPermissions, Collection, CollectionField, CanvasRun, PackageInfo, PackageManifest } from "@agent-canvas/shared";
 import { api, getRun, startRun } from "./api";
+import { onChange, useOnChange, type ChangeType } from "./changes";
 
 export type { Block, BlockPermissions, Collection, CollectionField, PackageInfo, PackageManifest, PackageConnection } from "@agent-canvas/shared";
 
@@ -63,12 +64,14 @@ export function useStudioTheme(): StudioTheme {
     let dead = false;
     const load = () => getTheme().then((t) => !dead && setTokens(t)).catch(() => undefined);
     void load();
-    const timer = setInterval(() => !document.hidden && void load(), 10_000);
+    const timer = setInterval(() => !document.hidden && void load(), 30_000);
+    const off = onChange((c) => (c.type === "theme" || c.type === "all") && void load());
     const onSaved = (e: Event) => setTokens((e as CustomEvent<StudioTheme>).detail);
     window.addEventListener("studio-theme", onSaved);
     return () => {
       dead = true;
       clearInterval(timer);
+      off();
       window.removeEventListener("studio-theme", onSaved);
     };
   }, []);
@@ -84,8 +87,11 @@ export const connectPackage = (id: string, body: Record<string, string | null>) 
 export const importPackage = (manifest: unknown) => api<PackageInfo>("/packages", { method: "POST", body: JSON.stringify({ ...(manifest as object), source: "user" }) });
 export const deletePackageDefinition = (id: string) => api<{ ok: true }>(`/packages/${id}/definition`, { method: "DELETE" });
 
-/** Lista que se atualiza sozinha (o Claude pode criar/alterar pelo MCP); pausa com a aba oculta. */
-export function usePolled<T>(load: () => Promise<T>, everyMs = 4000) {
+/**
+ * Lista que se atualiza sozinha (o Claude pode criar/alterar pelo MCP). Recarrega NA HORA quando o servidor avisa uma mudanca dos tipos
+ * `on` (GET /events) e, por garantia, de tempos em tempos (`everyMs`, pausa com a aba oculta).
+ */
+export function usePolled<T>(load: () => Promise<T>, everyMs = 4000, on: ChangeType[] = []) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState("");
   const refresh = useCallback(async () => {
@@ -107,6 +113,7 @@ export function usePolled<T>(load: () => Promise<T>, everyMs = 4000) {
     }, everyMs);
     return () => clearInterval(t);
   }, [refresh, everyMs]);
+  useOnChange(on, () => void refresh());
   return { data, error, refresh };
 }
 

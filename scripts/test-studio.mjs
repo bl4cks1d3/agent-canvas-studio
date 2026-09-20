@@ -368,6 +368,60 @@ try {
   check("chaves: remove", r.status === 200 && !r.json?.keys?.includes("ZZ_TEST_TOKEN"), msg(r));
   r = await call("DELETE", "/integrations/keys/PATH");
   check("chaves: nao remove variavel que nao e de segredo -> 400", r.status === 400, msg(r));
+
+  // ------------------------------------------------------------ eventos (a tela atualiza na hora quando o Claude muda algo)
+  {
+    const got = [];
+    const ac = new AbortController();
+    const res = await fetch(S + "/events", { signal: ac.signal, headers: { Accept: "text/event-stream" } });
+    check("eventos: GET /events abre um stream SSE", res.status === 200 && (res.headers.get("content-type") ?? "").includes("text/event-stream"), res.headers.get("content-type"));
+    (async () => {
+      const dec = new TextDecoder();
+      let buf = "";
+      try {
+        for await (const part of res.body) {
+          buf += dec.decode(part, { stream: true });
+          const events = buf.split(/\n\n/);
+          buf = events.pop() ?? "";
+          for (const ev of events) {
+            const m = ev.match(/^data: (.+)$/m);
+            if (m) try { got.push(JSON.parse(m[1])); } catch {}
+          }
+        }
+      } catch {}
+    })();
+    const wait = async (fn, ms = 2000) => {
+      const t0 = Date.now();
+      while (Date.now() - t0 < ms) {
+        if (got.some(fn)) return true;
+        await new Promise((ok) => setTimeout(ok, 50));
+      }
+      return false;
+    };
+    r = await call("POST", "/collections", { name: "zz_evt", label: "ZZ evt", fields: [{ name: "t", type: "text" }] });
+    cleanup.collections.push("zz_evt");
+    check("eventos: criar colecao avisa {data, zz_evt}", await wait((e) => e.type === "data" && e.key === "zz_evt"));
+    got.length = 0;
+    r = await call("POST", "/collections/zz_evt/records", { t: "a" });
+    check("eventos: gravar registro avisa a colecao", await wait((e) => e.type === "data" && e.key === "zz_evt"));
+    got.length = 0;
+    for (let i = 0; i < 5; i++) await call("POST", "/collections/zz_evt/records", { t: "x" + i });
+    await new Promise((ok) => setTimeout(ok, 400));
+    check("eventos: 5 gravacoes seguidas viram poucos avisos (agrupados em 80 ms)", got.filter((e) => e.type === "data" && e.key === "zz_evt").length <= 3, JSON.stringify(got));
+    got.length = 0;
+    r = await call("POST", "/blocks", { name: "zz evt bloco", source: "agent", html: "<p>x</p>", js: "", permissions: { read: [], write: [], tools: [], agents: [] } });
+    if (r.json?.id) cleanup.blocks.push(r.json.id);
+    check("eventos: criar componente avisa {blocks, id}", await wait((e) => e.type === "blocks" && e.key === r.json?.id), msg(r));
+    got.length = 0;
+    r = await call("POST", "/pages", { name: "zz evt pagina" });
+    if (r.json?.id) cleanup.pages.push(r.json.id);
+    check("eventos: criar pagina avisa {pages}", await wait((e) => e.type === "pages"), msg(r));
+    got.length = 0;
+    const tema = (await call("GET", "/theme")).json;
+    r = await call("PUT", "/theme", tema);
+    check("eventos: salvar tema avisa {theme}", await wait((e) => e.type === "theme"), msg(r));
+    ac.abort();
+  }
 } finally {
   await call("DELETE", "/integrations/keys/ZZ_TEST_TOKEN");
   for (const id of cleanup.notifications) await call("DELETE", `/notifications/${id}`);

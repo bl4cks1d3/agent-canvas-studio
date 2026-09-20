@@ -36,7 +36,7 @@ export default function Page() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [run, setRun] = useState<CanvasRun | null>(null);
   const [view, setView] = useState<View>("dashboard");
-  const pages = usePolled(listPages, 4000);
+  const pages = usePolled(listPages, 8000, ["pages"]);
   const [pageId, setPageId] = useState<string | null>(null);
   const [focus, setFocus] = useState(false);
   const [builderOpen, setBuilderOpen] = useState(false);

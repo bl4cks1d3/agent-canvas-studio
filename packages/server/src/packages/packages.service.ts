@@ -1,3 +1,4 @@
+import { ChangesService } from "../events/changes.service";
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type { Block, BlockPermissions, PackageConnection, PackageInfo, PackageManifest, Requirement } from "@agent-canvas/shared";
 import { BlocksService } from "../blocks/blocks.service";
@@ -51,7 +52,8 @@ export class PackagesService {
     private readonly blocks: BlocksService,
     private readonly canvases: CanvasesService,
     private readonly tools: ToolRegistry,
-    private readonly pages: PagesService
+    private readonly pages: PagesService,
+    private readonly changes: ChangesService
   ) {}
 
   // ---------------------------------------------------------------- consulta
@@ -204,6 +206,7 @@ export class PackagesService {
       .prepare(`INSERT INTO installed_packages (id, version, connections, block_ids, canvas_ids, page_ids, installed_at) VALUES (?, ?, ?, ?, ?, ?, ?)`)
       .run(manifest.id, manifest.version, "{}", JSON.stringify(created.map((b) => b.id)), JSON.stringify(Object.values(canvasIds)), JSON.stringify(pageIds), new Date().toISOString());
     this.applyConnections(manifest, blockIds, canvasIds, {});
+    this.changes.emit("packages", id);
     return this.get(id);
   }
 
@@ -234,6 +237,7 @@ export class PackagesService {
       }
     }
     this.db.prepare(`DELETE FROM installed_packages WHERE id = ?`).run(id);
+    this.changes.emit("packages", id);
     return { ok: true };
   }
 
@@ -261,6 +265,7 @@ export class PackagesService {
     manifest.canvases.forEach((c, i) => (keyToCanvas[c.key] = canvasIds[i]));
     this.applyConnections(manifest, keyToBlock, keyToCanvas, conn);
     this.patchCanvasTools(manifest, keyToCanvas, conn);
+    this.changes.emit("packages", id);
     return this.get(id);
   }
 
@@ -315,6 +320,7 @@ export class PackagesService {
     this.db
       .prepare(`INSERT INTO custom_packages (id, manifest, source, created_at, updated_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET manifest = excluded.manifest, source = excluded.source, updated_at = excluded.updated_at`)
       .run(m.id, JSON.stringify(m), source, now, now);
+    this.changes.emit("packages", m.id);
     return this.get(m.id);
   }
 
@@ -323,6 +329,7 @@ export class PackagesService {
     if (this.installedRow(id) && !this.lib().some((m) => m.id === id)) throw new BadRequestException("desinstale o pacote antes");
     const r = this.db.prepare(`DELETE FROM custom_packages WHERE id = ?`).run(id);
     if (Number(r.changes) === 0) throw new NotFoundException("pacote criado nao encontrado");
+    this.changes.emit("packages", id);
     return { ok: true };
   }
 

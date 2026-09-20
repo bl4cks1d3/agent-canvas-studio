@@ -1,3 +1,4 @@
+import { ChangesService } from "../events/changes.service";
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import type { Block, BlockPermissions, BlockSource } from "@agent-canvas/shared";
@@ -73,7 +74,8 @@ const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v =
 export class BlocksService {
   constructor(
     @Inject(CANVAS_DB) private readonly db: CanvasDb,
-    private readonly data: DataService
+    private readonly data: DataService,
+    private readonly changes: ChangesService
   ) {}
 
   list(): Block[] {
@@ -146,6 +148,7 @@ export class BlocksService {
     this.db.prepare(`DELETE FROM block_state WHERE block_id = ?`).run(id);
     this.db.prepare(`DELETE FROM block_versions WHERE block_id = ?`).run(id);
     this.db.prepare(`DELETE FROM blocks WHERE id = ?`).run(id);
+    this.changes.emit("blocks", id);
     return { ok: true };
   }
 
@@ -158,6 +161,7 @@ export class BlocksService {
     this.db
       .prepare(`INSERT INTO block_inbox (block_id, items, updated_at) VALUES (?, ?, ?) ON CONFLICT(block_id) DO UPDATE SET items = excluded.items, updated_at = excluded.updated_at`)
       .run(blockId, JSON.stringify(items.slice(0, 200)), new Date().toISOString());
+    this.changes.emit("blocks", blockId);
   }
 
   // ---------------------------------------------------------------- consistencia
@@ -242,6 +246,7 @@ export class BlocksService {
            package_id = excluded.package_id, config = excluded.config, updated_at = excluded.updated_at`
       )
       .run(b.id, b.name, b.description ?? null, b.html, b.css, b.js, JSON.stringify(b.permissions), b.refreshSeconds, b.source, b.approved ? 1 : 0, b.packageId ?? null, JSON.stringify(b.config), b.createdAt, b.updatedAt);
+    this.changes.emit("blocks", b.id);
     return this.get(b.id);
   }
 

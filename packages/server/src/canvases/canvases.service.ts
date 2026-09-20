@@ -1,3 +1,4 @@
+import { ChangesService } from "../events/changes.service";
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, type OnModuleInit } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import type { Canvas, CanvasRun, CanvasSource, Catalog } from "@agent-canvas/shared";
@@ -30,7 +31,8 @@ export class CanvasesService implements OnModuleInit {
     private readonly tools: ToolRegistry,
     private readonly data: DataService,
     private readonly blocks: BlocksService,
-    private readonly notifications: NotificationsService
+    private readonly notifications: NotificationsService,
+    private readonly changes: ChangesService
   ) {}
 
   onModuleInit(): void {
@@ -85,6 +87,7 @@ export class CanvasesService implements OnModuleInit {
     const built = this.build(input, undefined);
     const now = new Date().toISOString();
     const saved = repo.saveCanvas(this.db, { id: randomUUID(), ...built, createdAt: now, updatedAt: now });
+    this.changes.emit("canvases", saved.id);
     return { ...saved, problems: this.problemsOf(saved) };
   }
 
@@ -95,12 +98,14 @@ export class CanvasesService implements OnModuleInit {
     }
     const built = this.build(input, current);
     const saved = repo.saveCanvas(this.db, { ...current, ...built, id: current.id, createdAt: current.createdAt, updatedAt: new Date().toISOString() });
+    this.changes.emit("canvases", saved.id);
     return { ...saved, problems: this.problemsOf(saved) };
   }
 
   remove(id: string) {
     this.find(id);
     repo.deleteCanvas(this.db, id);
+    this.changes.emit("canvases", id);
     return { ok: true };
   }
 
@@ -136,6 +141,7 @@ export class CanvasesService implements OnModuleInit {
       .finally(() => {
         this.running.delete(runId);
         this.runningCanvas.delete(canvasId);
+        this.changes.emit("canvases", canvasId); // ultimo status/execucao mudou
       });
     return initial;
   }

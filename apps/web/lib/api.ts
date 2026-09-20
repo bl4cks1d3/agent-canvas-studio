@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useOnChange } from "./changes";
 import type { Canvas, CanvasEdge, CanvasNode, CanvasRun, Catalog } from "@agent-canvas/shared";
 
 export type { Canvas, CanvasEdge, CanvasNode, CanvasRun, Catalog, NodeLog, NodeSpec, FieldSpec, NodeType, ToolInfo } from "@agent-canvas/shared";
@@ -44,7 +45,7 @@ export const cancelRun = (runId: string) => api<{ ok: true }>(`/runs/${runId}/ca
 export const listRuns = (id: string, limit = 10) => api<CanvasRun[]>(`/canvases/${id}/runs?limit=${limit}`);
 
 /** Lista de canvases atualizada a cada `everyMs` (pausa com a aba oculta). */
-export function useCanvasList(everyMs = 4000) {
+export function useCanvasList(everyMs = 8000) {
   const [list, setList] = useState<Canvas[] | null>(null);
   const [online, setOnline] = useState(true);
   const refresh = useCallback(async () => {
@@ -65,5 +66,6 @@ export function useCanvasList(everyMs = 4000) {
     }, everyMs);
     return () => clearInterval(t);
   }, [refresh, everyMs]);
+  useOnChange(["canvases"], () => void refresh());
   return { list, online, refresh };
 }

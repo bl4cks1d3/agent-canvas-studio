@@ -1,3 +1,4 @@
+import { ChangesService } from "../events/changes.service";
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import { GRID_COLS, type DashboardPage, type PageItem } from "@agent-canvas/shared";
@@ -39,7 +40,8 @@ function toPage(r: Row): DashboardPage {
 export class PagesService {
   constructor(
     @Inject(CANVAS_DB) private readonly db: CanvasDb,
-    private readonly blocks: BlocksService
+    private readonly blocks: BlocksService,
+    private readonly changes: ChangesService
   ) {}
 
   list(): DashboardPage[] {
@@ -82,12 +84,14 @@ export class PagesService {
   remove(id: string) {
     this.get(id);
     this.db.prepare(`DELETE FROM dashboard_pages WHERE id = ?`).run(id);
+    this.changes.emit("pages", id);
     return { ok: true };
   }
 
   reorder(ids: unknown): DashboardPage[] {
     if (!Array.isArray(ids) || !ids.every((x) => typeof x === "string")) throw new BadRequestException("ids deve ser uma lista de ids de páginas");
     (ids as string[]).forEach((id, position) => this.db.prepare(`UPDATE dashboard_pages SET position = ? WHERE id = ?`).run(position, id));
+    this.changes.emit("pages");
     return this.list();
   }
 
@@ -111,6 +115,7 @@ export class PagesService {
          ON CONFLICT(id) DO UPDATE SET name = excluded.name, position = excluded.position, layout = excluded.layout, updated_at = excluded.updated_at`
       )
       .run(p.id, p.name, p.position, JSON.stringify(p.layout), p.packageId ?? null, p.createdAt, p.updatedAt);
+    this.changes.emit("pages", p.id);
     return this.get(p.id);
   }
 

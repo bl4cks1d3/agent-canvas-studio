@@ -1,3 +1,4 @@
+import { ChangesService } from "../events/changes.service";
 import { BadRequestException, Inject, Injectable } from "@nestjs/common";
 import { CANVAS_DB } from "../database.module";
 import type { CanvasDb } from "../db";
@@ -21,7 +22,10 @@ export const DEFAULT_THEME: StudioTheme = { accent: "", radius: 12, fontSize: 13
  */
 @Injectable()
 export class ThemeService {
-  constructor(@Inject(CANVAS_DB) private readonly db: CanvasDb) {}
+  constructor(
+    @Inject(CANVAS_DB) private readonly db: CanvasDb,
+    private readonly changes: ChangesService
+  ) {}
 
   get(): StudioTheme {
     const row = this.db.prepare(`SELECT value FROM studio_settings WHERE key = 'theme'`).get() as { value: string } | undefined;
@@ -38,6 +42,7 @@ export class ThemeService {
     this.db
       .prepare(`INSERT INTO studio_settings (key, value, updated_at) VALUES ('theme', ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`)
       .run(JSON.stringify(next), new Date().toISOString());
+    this.changes.emit("theme");
     return next;
   }
 

@@ -1,3 +1,4 @@
+import { ChangesService } from "../events/changes.service";
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import type { Collection, CollectionField, CollectionFieldType } from "@agent-canvas/shared";
@@ -58,7 +59,9 @@ function toRecord(row: RecordRow): FlatRecord {
 @Injectable()
 export class DataService {
   constructor(
-    @Inject(CANVAS_DB) private readonly db: CanvasDb) {}
+    @Inject(CANVAS_DB) private readonly db: CanvasDb,
+    private readonly changes: ChangesService
+  ) {}
 
   // ---------------------------------------------------------------- colecoes
 
@@ -93,6 +96,7 @@ export class DataService {
     this.db
       .prepare(`INSERT INTO collections (id, name, label, description, fields, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`)
       .run(collection.id, collection.name, collection.label, collection.description ?? null, JSON.stringify(collection.fields), now, now);
+    this.changes.emit("data", name);
     return collection;
   }
 
@@ -108,6 +112,7 @@ export class DataService {
     this.db
       .prepare(`UPDATE collections SET label = ?, description = ?, fields = ?, updated_at = ? WHERE id = ?`)
       .run(next.label, next.description ?? null, JSON.stringify(next.fields), next.updatedAt, next.id);
+    this.changes.emit("data", name);
     return next;
   }
 
@@ -115,6 +120,7 @@ export class DataService {
     const collection = this.getCollection(name);
     this.db.prepare(`DELETE FROM records WHERE collection_id = ?`).run(collection.id);
     this.db.prepare(`DELETE FROM collections WHERE id = ?`).run(collection.id);
+    this.changes.emit("data", name);
     return { ok: true };
   }
 
@@ -159,6 +165,7 @@ export class DataService {
     const now = new Date().toISOString();
     const id = randomUUID();
     this.db.prepare(`INSERT INTO records (id, collection_id, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`).run(id, collection.id, JSON.stringify(data), now, now);
+    this.changes.emit("data", name);
     return { ...data, id, createdAt: now, updatedAt: now };
   }
 
@@ -171,6 +178,7 @@ export class DataService {
     for (const [key, value] of Object.entries(input)) if (value === null) delete merged[key];
     const now = new Date().toISOString();
     this.db.prepare(`UPDATE records SET data = ?, updated_at = ? WHERE id = ?`).run(JSON.stringify(merged), now, id);
+    this.changes.emit("data", name);
     return { ...merged, id, createdAt: row.created_at, updatedAt: now };
   }
 
@@ -178,6 +186,7 @@ export class DataService {
     const collection = this.getCollection(name);
     const result = this.db.prepare(`DELETE FROM records WHERE id = ? AND collection_id = ?`).run(id, collection.id);
     if (Number(result.changes) === 0) throw new NotFoundException("registro nao encontrado");
+    this.changes.emit("data", name);
     return { ok: true };
   }
 

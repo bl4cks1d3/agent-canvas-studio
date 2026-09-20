@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useOnChange } from "@/lib/changes";
 import Icon from "@/lib/icons";
 import {
   createCollection,
@@ -96,10 +97,12 @@ function Records({ c, onChanged }: { c: CollectionWithCount; onChanged: () => vo
   }
   useEffect(() => {
     void load();
-    const t = setInterval(() => !document.hidden && !editing && void load(), 4000);
+    const t = setInterval(() => !document.hidden && !editing && void load(), 15_000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [c.name, q, editing]);
+  // o Claude/agente gravou nesta colecao: mostra na hora (sem interromper quem esta editando um registro)
+  useOnChange(["data"], () => !editing && void load(), (e) => e.key === undefined || e.key === c.name);
 
   return (
     <div className="split-main">
@@ -169,7 +172,7 @@ function Records({ c, onChanged }: { c: CollectionWithCount; onChanged: () => vo
 
 /** Banco do Studio: coleções (esquema definido em uso) e seus registros. */
 export default function DataView() {
-  const cols = usePolled(listCollections, 5000);
+  const cols = usePolled(listCollections, 10_000, ["data"]);
   const [activeName, setActiveName] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({ name: "", label: "", fields: "titulo: text\nstatus: select(aberto|feito)" });

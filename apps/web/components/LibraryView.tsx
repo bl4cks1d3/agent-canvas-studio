@@ -152,7 +152,7 @@ function PackageCard({ pkg, catalog, onChanged, onOpenCanvas, onOpenPage }: { pk
 
 /** Biblioteca de pacotes prontos (dashboards): instala e PEDE as conexões de que cada um precisa. */
 export default function LibraryView({ onOpenCanvas, onOpenPage }: { onOpenCanvas: (id: string) => void; onOpenPage: (id: string) => void }) {
-  const packages = usePolled(listPackages, 4000);
+  const packages = usePolled(listPackages, 8000, ["packages"]);
   const catalog = usePolled(getCatalog, 10000);
   const [importing, setImporting] = useState(false);
   const [text, setText] = useState("");

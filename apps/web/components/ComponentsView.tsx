@@ -62,7 +62,7 @@ function ThemePanel() {
 }
 
 function Versions({ block, onChanged }: { block: Block; onChanged: () => void }) {
-  const versions = usePolled(() => listVersions(block.id), 5000);
+  const versions = usePolled(() => listVersions(block.id), 10_000, ["blocks"]);
   const [error, setError] = useState("");
   const list = versions.data ?? [];
   return (
@@ -96,7 +96,7 @@ function Versions({ block, onChanged }: { block: Block; onChanged: () => void })
 
 function Detail({ block, onChanged }: { block: Block; onChanged: () => void }) {
   const [tab, setTab] = useState<"preview" | "js" | "html" | "css" | "versoes">("preview");
-  const lint = usePolled(() => getLint(block.id), 6000);
+  const lint = usePolled(() => getLint(block.id), 12_000, ["blocks", "data"]);
   const [draft, setDraft] = useState({ html: block.html, css: block.css, js: block.js });
   const [reload, setReload] = useState(0);
   const [logs, setLogs] = useState<FrameLog[]>([]);
@@ -204,7 +204,7 @@ function Detail({ block, onChanged }: { block: Block; onChanged: () => void }) {
 
 /** Componentes visuais (blocos): quem criou, permissões, aprovação, código e pré-visualização ao vivo. */
 export default function ComponentsView() {
-  const blocks = usePolled(listBlocks, 4000);
+  const blocks = usePolled(listBlocks, 8000, ["blocks"]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const list = blocks.data ?? [];
