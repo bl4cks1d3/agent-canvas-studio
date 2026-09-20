@@ -1,6 +1,7 @@
 {
   "name": "@agent-canvas/server",
   "version": "0.1.0",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/main.ts",

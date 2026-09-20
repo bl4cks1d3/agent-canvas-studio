@@ -1,59 +1,68 @@
 # Agent Canvas Studio
 
-Um estúdio para **construir dashboards sob medida em linguagem natural**. Você descreve (“um kanban”, “um CRM”, “um painel do Google Workspace”, “notas”) e o **Claude constrói dentro do app**: os dados (coleções no banco), os componentes visuais (HTML + CSS + JS), a página do dashboard e, se precisar, os agentes de IA que os alimentam. Tudo **persiste no banco** — dados, design e organização da tela.
+[![Licença: MIT](https://img.shields.io/badge/licença-MIT-blue.svg)](LICENSE)
+![Node ≥ 22.5](https://img.shields.io/badge/node-%E2%89%A5%2022.5-339933)
+
+Um estúdio para **construir dashboards sob medida em linguagem natural**. Você descreve (“um kanban”, “um CRM”, “meus hábitos e minhas tarefas do Google”) e o **Claude constrói dentro do app**: os dados (coleções no banco), os componentes visuais (HTML + CSS + JS), a página do dashboard e, se precisar, os agentes de IA que os alimentam. Tudo **persiste no banco**: dados, design e organização da tela. E a tela **se atualiza sozinha** quando o Claude ou um agente muda alguma coisa.
+
+Roda 100 % na sua máquina (Node + SQLite). Nada sobe para a nuvem, exceto o que você mesmo conecta: chaves de IA (Groq, Gemini, Anthropic) e a conta Google.
+
+## O que tem aqui
 
 | Área | Para que serve |
 |---|---|
-| **Dashboard** | A visão principal: páginas (na barra lateral, como paginação) com os componentes prontos funcionando. “Editar layout” liga a organização em grade: arraste, redimensione e puxe componentes da bandeja. **Tela cheia** para usar como painel. |
-| **Orquestração** | O canvas (React Flow, estilo n8n): agentes de IA, ferramentas MCP, leitura/gravação de dados, condições e componentes ligados por fios. É onde se orquestra o que alimenta o dashboard. |
-| **Biblioteca** | Dashboards prontos (Kanban, CRM, Notas, ERP leve, Google Workspace…). Ao instalar, o Studio **pede as conexões** que o pacote precisa (ferramentas de MCP, chave de IA). |
-| **Componentes** | Todos os componentes: quem criou, permissões, aprovação, código, **versões** e o **tema** (design tokens) que vale para todos. |
-| **Dados** | As coleções e seus registros (esquema definido em uso). |
-| **Criar com Claude** | Você descreve; o Claude Code trabalha em segundo plano (só com as ferramentas do Agent Canvas) e entrega coleções, componentes e páginas. Você aprova. |
+| **Dashboard** | A visão principal: páginas (na barra lateral) com os componentes funcionando. *Editar layout* liga a grade: arraste, redimensione e puxe componentes da bandeja. *Tela cheia* para usar como painel. |
+| **Orquestração** | O canvas (estilo n8n): agentes de IA, ferramentas, leitura e gravação de dados, condições, notificações e componentes ligados por fios. Simula sem gastar cota e executa ao vivo quando você manda. |
+| **Biblioteca** | Pacotes prontos (Rotina e Estudo, Kanban, Kanban Google, Saúde, CRM, ERP leve, Notas, Google Workspace). Ao instalar, o Studio pede as conexões que o pacote precisa. |
+| **Componentes** | Todos os componentes: quem criou, permissões, **aprovação**, código, **versões** e o **tema** (cor, cantos, fonte, densidade) que vale para todos. |
+| **Dados** | Coleções e registros (esquema definido em uso), com relações, lote e **lixeira** de 30 dias. |
+| **Configurações** | Chaves e modelos das IAs, conta Google, som e notificações do sistema. |
+| **Terminal** | O Claude Code dentro do app, com o MCP do Studio (``Ctrl+` ``): peça em português e veja aparecer na tela. |
+| **Criar com Claude** | Você descreve; o Claude Code trabalha em segundo plano e entrega coleções, componentes e páginas para você aprovar. |
 
-## Rodando
+## Começando
 
-Requisitos: Node ≥ 22.5 (usa `node:sqlite`), pnpm 10, e — para “Criar com Claude” e o terminal — o Claude Code instalado.
+Requisitos: **Node ≥ 22.5** (usa o `node:sqlite` embutido), **pnpm 10** e, para o terminal e o “Criar com Claude”, o **Claude Code** instalado. A conta Google pede também o **uv** (`uvx`).
 
 ```bash
-pnpm setup                # instala, compila, cria o .env e registra as ferramentas no Claude Code (um comando)
-pnpm dev                  # servidor :5100, web :5200, terminal :5300
+pnpm setup      # instala, compila, cria o .env e registra o MCP no Claude Code
+pnpm dev        # API :5100 · app web :5200 · terminal :5300
 ```
 
-Abra <http://localhost:5200>. As chaves de IA e a conta Google se cadastram na aba **Configurações**. Sem chave de IA tudo funciona, menos os agentes.
+Abra <http://localhost:5200>. Numa instalação nova o **padrão de fábrica** já vem pronto: hábitos, tarefas, diário, pomodoro, flashcards, kanban, hidratação com lembrete e o painel do Google. As chaves de IA e a conta Google você cadastra na aba **Configurações** (nunca é preciso editar o `.env` na mão). Passo a passo em [docs/INSTALACAO.md](docs/INSTALACAO.md).
 
-### Padrão de fábrica
+## Documentação
 
-Numa instalação nova (banco vazio) o servidor já instala sozinho os pacotes **Rotina e Estudo** (hábitos, tarefas, matriz de Eisenhower, diário, constância, pomodoro, metas, flashcards), **Kanban Google** (Google Tasks + Agenda), **Saúde: Hidratação** (água com lembrete), **Kanban** e **Google Workspace** — componentes já aprovados e a página inicial pronta. Nada é instalado sozinho num banco que já tem dados; para reinstalar o que faltar: `pnpm factory:restore` (não apaga nada). `AGENT_CANVAS_NO_FACTORY=1` desliga.
-
-Um pacote criado pelo Claude vira padrão de fábrica com `pnpm export:package <id>` (grava em `packages/server/src/packages/library/<id>/`) e entrando na lista `FACTORY_PACKAGES` de `packages/server/src/packages/factory.service.ts`.
-
-### Ferramentas no Claude Code
-
-`pnpm install:claude` (ou `node scripts/install-mcp.mjs`) registra o MCP `agent-canvas` no Claude Code para valer em qualquer pasta (`--check`, `--remove`, `--url` para um Studio em outra máquina).
-
-### Raspberry Pi
-
-`pnpm pack:pi` gera um pacote já compilado (também publicado como *release* no GitHub) e `bash scripts/pi/install-on-pi.sh` instala no Pi. Leia [docs/RASPBERRY-PI.md](docs/RASPBERRY-PI.md): o que roda e o que não roda em um Pi 2 (32 bits, 1 GB).
+| Documento | Conteúdo |
+|---|---|
+| [Instalação](docs/INSTALACAO.md) | Requisitos, instalação, primeira execução, atualização e desinstalação |
+| [Guia do usuário](docs/GUIA-DO-USUARIO.md) | Tour por cada área e receitas do dia a dia |
+| [Arquitetura](docs/ARQUITETURA.md) | Pacotes, fluxo de dados, eventos em tempo real, banco de dados |
+| [Configuração](docs/CONFIGURACAO.md) | Todas as variáveis de ambiente, portas e pastas |
+| [Studio](docs/STUDIO.md) | Modelo de dados, componentes, páginas, pacotes, lembretes |
+| [Componentes](docs/COMPONENTES.md) | Como escrever um componente: `ctx`, design system, permissões, lint |
+| [Orquestração](docs/ORQUESTRACAO.md) | Tipos de nó, expressões, execução, provedores de IA |
+| [Biblioteca](docs/BIBLIOTECA.md) | Catálogo de pacotes, padrão de fábrica e como criar um pacote |
+| [Google](docs/GOOGLE.md) | Conta Google, Tarefas, Agenda e sincronização |
+| [MCP e Claude Code](docs/MCP.md) | Todas as ferramentas do MCP e os perfis do terminal |
+| [API HTTP](docs/API.md) | Referência de rotas |
+| [Segurança](docs/SEGURANCA.md) | Modelo de ameaças, isolamento, o que nunca é feito |
+| [Solução de problemas](docs/SOLUCAO-DE-PROBLEMAS.md) | Erros comuns e como resolver |
+| [Desenvolvimento](docs/DEVELOPMENT.md) | Estrutura do código, testes, como contribuir |
+| [Raspberry Pi](docs/RASPBERRY-PI.md) | Empacotar e instalar no Pi (opcional) |
+| [Changelog](CHANGELOG.md) | Histórico de mudanças |
 
 ## Como o Claude constrói
 
-1. **Pelo app**: botão **Criar com Claude** → descreva → acompanhe o progresso → aprove os componentes.
-2. **Pelo terminal do app** (aba Terminal, na Orquestração) ou por qualquer Claude Code: `pnpm mcp:install` registra o MCP `agent-canvas`; use o prompt `/mcp__agent-canvas__construir-dashboard` ou simplesmente peça.
+1. **No app**: *Criar com Claude* → descreva → acompanhe → aprove os componentes.
+2. **No terminal do app** (ou em qualquer Claude Code com o MCP `agent-canvas`): peça direto, por exemplo *“crie um controle de gastos com categorias e um gráfico por mês”*. O Claude lê o guia do Studio e usa `save_collection`, `save_block`, `save_page`, `save_package`, `save_canvas`…
 
-O Claude usa o guia `studio_guide` (design system, API dos componentes, regras de persistência/consistência) e as ferramentas `save_collection`, `save_block`, `save_page`, `place_block`, `save_package`, `save_canvas`… Componentes criados por agente **nascem sem aprovação**: só rodam depois que você revisa as permissões e aprova.
+Componentes criados por agente **nascem sem aprovação**: só rodam depois que você revisa as permissões e aprova. O Claude não tem ferramenta para aprovar, só simula orquestrações (a execução ao vivo é sua) e é instruído a nunca ler as suas chaves.
 
-## Persistência e consistência
+## Segurança em uma frase
 
-- **Dados**: coleções com esquema (tipos, obrigatórios, opções) e validação; registros em SQLite.
-- **Estado de tela** (`ctx.store`): aba, filtro, seleção… persistem por componente.
-- **Design**: o código do componente fica no banco com **histórico de versões** (restaurável); o layout de cada página (posição/tamanho na grade) também; o **tema** (cor de destaque, cantos, fonte, densidade) vale para todos os componentes e para o app.
-- **Consistência**: avisos ao salvar um componente (cor fixa fora do design system, APIs bloqueadas, coleção sem permissão…), permissões só para coleções existentes, edição concorrente detectada (409).
+Tudo escuta só em `127.0.0.1`; componentes rodam em iframe isolado sem rede e só enxergam o que suas permissões liberam; as chaves ficam no `.env` e nenhuma resposta da API as devolve. Detalhes em [docs/SEGURANCA.md](docs/SEGURANCA.md). **Não exponha as portas na rede.**
 
-Detalhes em [docs/STUDIO.md](docs/STUDIO.md), API em [docs/API.md](docs/API.md), desenvolvimento em [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+## Licença
 
-## Segurança
-
-- Componentes rodam em **iframe isolado** (`sandbox="allow-scripts"`, CSP sem rede); só acessam o que suas permissões liberam, conferidas a cada chamada. Código de agente/API só roda após **aprovação do usuário**; alterar código ou permissões revoga a aprovação.
-- O servidor e o terminal aceitam apenas `localhost`; ferramentas e o construtor exigem origem conhecida do Studio. **Não exponha as portas na rede.**
-- “Criar com Claude” roda o Claude Code **apenas com as ferramentas do Agent Canvas** (sem Bash, arquivos ou web).
+[MIT](LICENSE) © 2026 bl4cks1d3.

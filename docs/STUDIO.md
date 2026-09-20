@@ -14,70 +14,93 @@ Pacote = coleções + componentes + canvases + páginas + conexões pedidas
 
 ## Coleções (banco sob medida)
 
-`POST /collections` `{name, label, fields:[{name, type, required?, options?, collection?, default?}]}`. Tipos: `text`, `longtext`, `number`, `date`, `boolean`, `select`, `relation`. Registros são validados contra o esquema (número convertido, select restrito, obrigatórios). **`relation`** (`collection: "outra"`) guarda o id de um registro de outra coleção e o servidor recusa um id que não existe. **`default`** (`today`, `now` ou `time`, só em `date`/`text`) preenche sozinho ao criar, no fuso local da máquina; `createdAt`/`updatedAt` continuam em UTC e `GET /clock` (ferramenta MCP `now`) dá a hora local.
+`POST /collections` `{name, label, description?, fields:[…]}`. O `name` usa minúsculas, números e `_` (2 a 40 caracteres, começa com letra). Prefixe por domínio para evitar colisão (`crm_contatos`). Limites: 40 campos por coleção, 10 000 registros por coleção.
 
-**Lote e lixeira.** `POST /collections/:nome/records/batch` `{create:[…], update:[{id,data}], delete:[ids]}` é tudo ou nada (até 200). Apagar um registro o manda para a lixeira por 30 dias: `GET /collections/:nome/trash` e `POST /collections/:nome/records/:id/restore` (na tela: botão *Lixeira* em Dados).
+### Campos
 
-**Lembretes ligados a registros.** Em `sistema_lembretes`, `depois_de: "saude_agua"` faz o intervalo contar do registro mais recente daquela coleção: beber água adia o próximo aviso.
+`{name, label?, type, required?, options?, collection?, default?}`
 
-**Google como dados e tarefas em sincronia.** As ferramentas `google_tasks_list`, `google_task_set`, `google_task_create`, `google_events_list` e `google_calendars_list` devolvem JSON (no MCP: `google_tasks`, `google_task_set`, `google_events`, `google_calendars`). `POST /sync/google-tasks` (MCP `sync_google_tasks`) sincroniza `rotina_tarefas` com o Google Tasks: a mesma tarefa nos dois lados é vinculada por título (sem duplicar), concluir ou reabrir de um lado vai para o outro e nada é apagado. A sincronização automática vem desligada: `PUT /sync/google-tasks` `{enabled:true, everyMinutes:10}`. Campos `id`, `createdAt`, `updatedAt` existem em todo registro. Enviar `null` num campo o limpa. Limites: 40 campos, 10 000 registros por coleção.
+| Tipo | Guarda | Observações |
+|---|---|---|
+| `text` | Texto até 2 000 caracteres | |
+| `longtext` | Texto até 20 000 caracteres | |
+| `number` | Número | Texto numérico (`"3"`) é convertido |
+| `date` | Data ISO (`2026-10-01`) ou data e hora ISO (`2026-10-01T14:30:00-03:00`) | |
+| `boolean` | Verdadeiro/falso | Aceita `"true"`/`"false"` |
+| `select` | Uma das `options` | `options` é obrigatório (até 50) |
+| `relation` | O **id** de um registro de outra coleção | `collection` é obrigatório. O servidor **recusa um id que não existe**, com a explicação e a coleção onde procurar |
+
+Nomes de campo: minúsculas, números e `_`. `id`, `createdAt` e `updatedAt` existem em todo registro e não podem ser usados como nome de campo. Ao **editar**, enviar `null` num campo o limpa; texto vazio (`""`) é tratado como "não informado" e não altera o campo (ao criar, também conta como ausente).
+
+**Valores automáticos (`default`).** Em campos `date` ou `text`, `default` preenche o campo **ao criar** o registro quando ele vem vazio, sempre no **fuso local da máquina**:
+
+| `default` | Valor | Tipos permitidos |
+|---|---|---|
+| `today` | `2026-09-20` | `date`, `text` |
+| `now` | `2026-09-20T14:11:37-03:00` (data e hora com fuso) | `date`, `text` |
+| `time` | `14:11` | só `text` |
+
+Quem informar o valor mantém o que informou. Assim ninguém precisa perguntar as horas nem misturar UTC com hora local. `createdAt`/`updatedAt` continuam em **UTC**; para a hora local use `GET /clock` (ferramenta MCP `now`).
+
+### Registros
+
+`GET /collections/:nome/records` aceita `?campo=valor` (igualdade), `q` (busca em todos os campos), `sort` (um campo, `createdAt` ou `updatedAt`), `order` (`asc`/`desc`), `limit` (até 1000, padrão 500) e `offset`. Registros são validados contra o esquema (tipo, opção, obrigatório, relação).
+
+### Lote (tudo ou nada)
+
+`POST /collections/:nome/records/batch` com `{create:[{…}], update:[{id, data}], delete:[ids]}` (até 200 operações). Se **qualquer** operação falhar, **nada** é gravado (transação). Resposta: `{created, updated, deleted}`.
+
+### Lixeira (desfazer)
+
+Apagar um registro (`DELETE …/records/:id`, o botão da tela, `ctx.records().remove` ou `delete` num lote) o **manda para a lixeira por 30 dias** (até 500 por coleção; o que passar disso ou de 30 dias é descartado). `GET /collections/:nome/trash` lista; `POST /collections/:nome/records/:id/restore` restaura com o mesmo id e os mesmos dados; `DELETE /collections/:nome/trash[/:id]` esvazia de vez (irreversível). Na tela: botão **Lixeira** em Dados. Excluir a **coleção** inteira não passa pela lixeira.
 
 ## Componentes
 
-Um componente é `{html, css, js, permissions, refreshSeconds}`. O `js` sempre começa com `studio.main(async (ctx) => { … })`.
+Um componente é `{html, css, js, permissions, refreshSeconds}`. O `js` sempre começa com `studio.main(async (ctx) => { … })`. A referência completa (o `ctx`, o design system, permissões, aprovação, versões, lint e isolamento) está em **[COMPONENTES.md](COMPONENTES.md)**.
 
-| API | O que faz |
-|---|---|
-| `ctx.records("colecao")` | `list(params)`, `create`, `update(id, body)`, `remove(id)` — só o que `permissions.read/write` liberar |
-| `ctx.store.get/set/remove/all` | estado persistente do componente (chaves `[A-Za-z0-9_.:-]{1,60}`, ≤ 64 KB por valor, ≤ 100 chaves) |
-| `ctx.tool(nome, args)` | ferramentas de `permissions.tools` (embutidas e de servidores MCP) |
-| `ctx.agent.run(idOuChave, texto)` | executa um canvas de agentes (`permissions.agents`); devolve `{status, result, error}` |
-| `ctx.inbox()` | itens entregues por um nó `ui.block` do canvas |
-| `ctx.ui.modal / confirm / toast`, `ctx.close` | interface (modais são iframes isolados que herdam as permissões) |
-| `ctx.config` | configuração do pacote (`agents`, `tools` mapeadas) |
+Em resumo:
 
-Isolamento: `sandbox="allow-scripts"` (origem opaca), CSP `connect-src 'none'`, scripts só com nonce (HTML do componente não injeta script nem handlers inline), sem `alert/confirm/prompt`, sem `localStorage`. Limite de 120 chamadas/5 s por componente.
-
-**Aprovação**: componentes criados por agente/API (`source: "agent"`) nascem `approved: false`; alterar `html/css/js/permissions` revoga; só o usuário aprova (`PATCH /blocks/:id/approve`, botões “Aprovar” no dashboard, em Componentes e no painel “Criar com Claude”).
-
-**Versões**: cada alteração de código/permissões guarda a versão anterior (30 por componente). `POST /blocks/:id/versions/:versionId/restore` volta (e revoga a aprovação).
-
-**Consistência (lint)**: `POST/PUT /blocks` devolvem `warnings`: falta `studio.main`; rede/`localStorage`/`alert` (bloqueados); handlers inline e `<script>` no html; recursos externos; **cores/fonte fixas** (use as variáveis do design system); coleção/ferramenta usada **sem permissão**; escrita com permissão só de leitura. Permissões para coleção inexistente são **recusadas** (400).
+- Rodam num iframe isolado, sem rede; só enxergam o que `permissions` liberar, conferido a cada chamada.
+- **Aprovação**: os criados por agente/API nascem `approved: false`; alterar `html/css/js/permissions` revoga; só o usuário aprova (`PATCH /blocks/:id/approve`).
+- **Versões**: 30 por componente, restauráveis (`POST /blocks/:id/versions/:versionId/restore`).
+- **Lint** ao salvar (`warnings`): rede, storage, handlers inline, cor/fonte fixas, coleção ou ferramenta sem permissão…
+- **Atualizam sozinhos** quando os dados que leem mudam ([ARQUITETURA.md](ARQUITETURA.md#como-uma-alteração-chega-na-tela)).
 
 ### Design system e tema
 
-Classes `ac-*` e variáveis `--ac-*` são injetadas em todo componente e modal (`apps/web/lib/design-system.ts`). O **tema** (`GET/PUT /theme`: `accent`, `radius`, `fontSize`, `density`) é salvo no banco e aplicado a todos os componentes e ao app — assim componentes de origens diferentes ficam consistentes, em claro e escuro.
+As classes `ac-*` e as variáveis `--ac-*` são injetadas em todo componente e modal (`apps/web/lib/design-system.ts`). O **tema** (`GET/PUT /theme`: `accent`, `radius`, `fontSize`, `density`) é salvo no banco e aplicado a todos os componentes e ao app, em claro e escuro.
 
 ## Notificações e lembretes
 
-- **Notificação** = registro em `notifications` (últimas 200) + evento SSE (`GET /notifications/stream`). O sino do Studio (`NotificationCenter`) mostra o balão e, com a permissão do navegador, dispara `new Notification(...)` quando a aba está em segundo plano. Avisos recebidos com o Studio fechado ficam não lidos no sino.
-- **Quem pode avisar**: qualquer componente (`ctx.tool("notify", {title, message, level})` com `permissions.tools: ["notify"]`), qualquer agente (`notify` em `tools`), o nó **`action.notify`** de uma orquestração (simulação não notifica; máx. 20 por execução) e os lembretes.
-- **Lembretes**: coleção `sistema_lembretes` (criada pelo servidor). A cada 15 s o `RemindersService` dispara os lembretes `ativo` dentro da janela `inicio`–`fim` cujo `a_cada_min` venceu (`ultimo_disparo` é do servidor; um servidor parado dispara uma vez ao voltar) e, se houver `canvas_id`, executa essa orquestração ao vivo com a mensagem como pedido.
+- **Notificação** = registro em `notifications` (últimas 200) + evento SSE (`GET /notifications/stream`). O sino do Studio mostra o balão e, com a permissão do navegador, dispara `new Notification(...)` com a aba em segundo plano. Avisos recebidos com o Studio fechado ficam não lidos no sino. Em **Configurações** há o som (toque e volume) e o **modo desktop** (notificação nativa do sistema).
+- **Quem pode avisar**: qualquer componente (`ctx.tool("notify", {title, message, level})` com `permissions.tools: ["notify"]`), qualquer agente (`notify` em `tools`), o nó **`action.notify`** de uma orquestração (a simulação não notifica; máx. 20 por execução) e os lembretes.
+- **Lembretes recorrentes**: coleção `sistema_lembretes` (criada pelo servidor). A cada 15 s o `RemindersService` dispara os lembretes `ativo` dentro da janela `inicio`–`fim` (hora local) cujo intervalo venceu. Um servidor parado dispara **uma** vez ao voltar (não acumula). Campos:
+
+  | Campo | Descrição |
+  |---|---|
+  | `chave` | Quem criou (ex.: `agua`); o componente acha o seu por aqui |
+  | `titulo`* / `mensagem` | Texto da notificação |
+  | `ativo` | Liga/desliga |
+  | `a_cada_min` | Intervalo em minutos |
+  | `inicio` / `fim` | Janela do dia (`HH:MM`); aceita atravessar a meia-noite |
+  | `canvas_id` | (opcional) orquestração executada **ao vivo** a cada disparo, com a mensagem como pedido |
+  | `depois_de` | (opcional) nome de uma coleção: o intervalo passa a contar do **registro mais recente dela**. Exemplo: `saude_agua` faz o lembrete de água esperar 60 min **depois do último copo registrado**, em vez de disparar de hora em hora mesmo depois de você beber |
+  | `ultimo_disparo` | Controlado pelo **servidor** (o componente só o grava ao ativar, para o primeiro aviso vir depois do intervalo) |
+
+- Não crie agendador dentro de um componente (timers do iframe morrem ao fechar a página): use a coleção de lembretes.
 
 ## Páginas do dashboard
 
-`DashboardPage {id, name, position, layout[]}`; cada item `{i, kind: "block"|"heading", blockId|text, x, y, w, h}` numa **grade de 12 colunas** (linha de 40 px). `PUT /pages/:id` aceita `baseUpdatedAt` (409 em conflito). `POST /pages/:id/place` acrescenta um componente no fim. Reordenar: `PUT /pages/order {ids}`. A barra lateral do Dashboard lista as páginas (paginação); **Editar layout** liga arrastar/redimensionar/bandeja; **Tela cheia** usa a Fullscreen API.
+`DashboardPage {id, name, position, layout[]}`; cada item `{i, kind: "block"|"heading", blockId|text, x, y, w, h}` numa **grade de 12 colunas** (linha de 40 px). `PUT /pages/:id` aceita `baseUpdatedAt` (409 em conflito). `POST /pages/:id/place` acrescenta um componente no fim. Reordenar: `PUT /pages/order {ids}`. A barra lateral do Dashboard lista as páginas; **Editar layout** liga arrastar/redimensionar/bandeja; **Tela cheia** usa a Fullscreen API.
 
 ## Pacotes (biblioteca)
 
-Pasta `packages/server/src/packages/library/<id>/` com `manifest.json` + arquivos dos componentes (`htmlFile/cssFile/jsFile`). O manifesto:
+Um pacote reúne coleções, componentes, orquestrações, páginas e as conexões que pede. Catálogo, formato do manifesto, padrão de fábrica e como criar um: **[BIBLIOTECA.md](BIBLIOTECA.md)**.
 
-```jsonc
-{ "id", "name", "description", "category", "version", "experimental?",
-  "requires": [ {"id","kind":"collection","label","collection"},
-                {"id","kind":"tool","label","hint","match":["calendar"],"optional?"},   // o usuário mapeia uma ferramenta MCP
-                {"id","kind":"ai","label","optional?"} ],
-  "collections": [...], "blocks": [{"key","name","permissions":{"tools":["@idDoRequisito"],"agents":["chaveDoCanvas"]}, ...}],
-  "canvases": [{"key","name","nodes","edges"}],   // nós agent.llm podem listar "@idDoRequisito" em tools
-  "pages": [{"name","layout":[{"blockKey","x","y","w","h"}]}], "seed": {"colecao":[{...}]} }
-```
+## Google
 
-`POST /packages/:id/install` cria tudo (com rollback em caso de erro) e `PUT /packages/:id/connections {idDoRequisito: "mcp__servidor__ferramenta"}` conecta: resolve `@id` nas permissões dos componentes e nos nós de agente, e entrega `ctx.config.tools`. Pacotes **criados pelo Claude** (`save_package`) ou importados entram na biblioteca; se vieram de agente, o componente instalado exige aprovação. Desinstalar remove componentes, páginas e canvases (e, opcionalmente, os dados).
+Ferramentas estruturadas (`google_tasks_list`, `google_events_list`…), Kanban Google e a **sincronização de tarefas** entre a Rotina e o Google Tasks: **[GOOGLE.md](GOOGLE.md)**.
 
 ## Criar com Claude (construtor autônomo)
 
-`POST /builder/runs {prompt, pageId?}` executa `claude -p` (Claude Code) em segundo plano com `--strict-mcp-config`, **só** o MCP `agent-canvas` liberado (`--allowedTools mcp__agent-canvas`, sem Bash/arquivos/web), `--permission-mode dontAsk` e um prompt de sistema que manda seguir o `studio_guide`. O progresso (chamadas de ferramenta, falas) fica em `GET /builder/runs/:id`; ao terminar traz o que foi criado/alterado (coleções, componentes com estado de aprovação, páginas). Uma execução por vez; limite de 12 min.
-
-## MCP (`packages/mcp`)
-
-Ferramentas: `studio_guide`, `now`, `list_collections`, `save_collection`, `list_records`, `save_record`, `save_records`, `delete_record`, `list_trash`, `restore_record`, `google_tasks`, `google_task_set`, `google_events`, `google_calendars`, `sync_google_tasks`, `list_blocks`, `get_block`, `save_block`, `delete_block`, `block_versions`, `list_pages`, `save_page`, `place_block`, `delete_page`, `list_packages`, `save_package`, `get_theme`, `set_theme`, além das de orquestração (`canvas_guide`, `canvas_nodes`, `list_canvases`, `get_canvas`, `save_canvas`, `run_canvas` — só simulação —, `canvas_runs`, `delete_canvas`). Prompts: `construir-dashboard`, `construir-canvas`. Recursos: `studio://guia`, `canvas://guia`.
+`POST /builder/runs {prompt, pageId?}` executa `claude -p` (Claude Code) em segundo plano com `--strict-mcp-config`, **só** o MCP `agent-canvas` liberado (sem Bash/arquivos/web), `--permission-mode dontAsk` e um prompt de sistema que manda seguir o `studio_guide`. O progresso (chamadas de ferramenta, falas) fica em `GET /builder/runs/:id`; ao terminar traz o que foi criado ou alterado (coleções, componentes com estado de aprovação, páginas). Uma execução por vez; limite de 12 minutos. As ferramentas do MCP estão em **[MCP.md](MCP.md)**.

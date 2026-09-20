@@ -1,5 +1,5 @@
 // Testes offline (sem servidor, sem conta Google) do que le o texto do Google e decide a sincronizacao de tarefas.
-// Uso: node scripts/test-google-sync.mjs   (o Node 22.6+ executa os .ts direto)
+// Uso: node scripts/test-google-sync.mjs   (precisa de Node 22.18+ ou 23.6+, que executam .ts direto)
 import { createdTaskId, googleProblem, parseCalendars, parseEvents, parseTasks } from "../packages/server/src/integrations/google-parse.ts";
 import { planSync } from "../packages/server/src/integrations/tasks-sync-plan.ts";
 

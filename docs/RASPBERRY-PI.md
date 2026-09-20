@@ -1,5 +1,7 @@
 # Agent Canvas no Raspberry Pi
 
+> **Opcional.** O uso normal do Studio é no seu computador ([INSTALACAO.md](INSTALACAO.md)). Este guia cobre o empacotamento (`pnpm pack:pi`) e a instalação no Pi. O app e a API escutam só em `127.0.0.1` no Pi: para abrir de outro computador use um **túnel SSH**. Acesso direto pelo IP da rede **não é suportado** (a API não tem senha; veja [SEGURANCA.md](SEGURANCA.md)).
+
 ## O que roda em um Raspberry Pi 2 Model B (e o que não roda)
 
 O Pi 2 B tem processador **ARM de 32 bits (ARMv7)** e **1 GB de RAM**. Isso decide o que funciona:

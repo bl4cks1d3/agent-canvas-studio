@@ -1,6 +1,7 @@
 {
   "name": "agent-canvas",
   "version": "0.1.0",
+  "license": "MIT",
   "private": true,
   "description": "Agent Canvas Studio - dashboards personalizados construidos pelo Claude, com dados persistentes e agentes conectados",
   "packageManager": "pnpm@10.28.2",
