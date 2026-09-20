@@ -5,8 +5,9 @@
 //   pnpm pack:pi                      compila e empacota
 //   pnpm pack:pi -- --skip-build      só empacota o que já está compilado
 //
-// No Pi:  tar xzf agent-canvas-pi.tar.gz && cd agent-canvas && ./scripts/pi/install-on-pi.sh
+// No Pi:  tar xzf agent-canvas-pi.tar.gz && cd agent-canvas && bash scripts/pi/install-on-pi.sh
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -72,6 +73,10 @@ writeFileSync(join(stage, "PACK-INFO.txt"), `Agent Canvas Studio para Raspberry 
 console.log("[3/3] Compactando…");
 const tar = spawnSync("tar", ["-czf", "agent-canvas-pi.tar.gz", "agent-canvas"], { cwd: out, stdio: "inherit" });
 if (tar.status !== 0) fail('O comando "tar" falhou (no Windows 10/11 ele já vem instalado).');
+// soma de verificacao no formato do "sha256sum -c" (o Pi confere o download antes de instalar)
+const sha = createHash("sha256").update(readFileSync(join(out, "agent-canvas-pi.tar.gz"))).digest("hex");
+writeFileSync(join(out, "agent-canvas-pi.tar.gz.sha256"), `${sha}  agent-canvas-pi.tar.gz
+`);
 const mb = (statSync(join(out, "agent-canvas-pi.tar.gz")).size / 1024 / 1024).toFixed(1);
 console.log(`
 ✔ ${join(out, "agent-canvas-pi.tar.gz")} (${mb} MB)
@@ -79,5 +84,5 @@ console.log(`
 Próximos passos:
   scp dist-pi/agent-canvas-pi.tar.gz pi@raspberrypi.local:~/
   ssh pi@raspberrypi.local
-  tar xzf agent-canvas-pi.tar.gz && cd agent-canvas && ./scripts/pi/install-on-pi.sh
+  tar xzf agent-canvas-pi.tar.gz && cd agent-canvas && bash scripts/pi/install-on-pi.sh
 Leia docs/RASPBERRY-PI.md (o que roda no Pi 2 e o que não roda, como levar seus dados e como usar o Claude Code do seu PC).`);

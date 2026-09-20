@@ -31,16 +31,30 @@ Compila tudo e cria `dist-pi/agent-canvas-pi.tar.gz` (menos de 1 MB, sem `node_m
 
 ### 2. Levar para o Pi e instalar
 
+**Opção A — baixar direto do GitHub (release, sem precisar do PC):**
+
+```bash
+cd ~
+curl -fL -o agent-canvas-pi.tar.gz https://github.com/bl4cks1d3/agent-canvas-studio/releases/latest/download/agent-canvas-pi.tar.gz
+curl -fL -o agent-canvas-pi.tar.gz.sha256 https://github.com/bl4cks1d3/agent-canvas-studio/releases/latest/download/agent-canvas-pi.tar.gz.sha256
+sha256sum -c agent-canvas-pi.tar.gz.sha256          # deve mostrar: agent-canvas-pi.tar.gz: OK
+tar xzf agent-canvas-pi.tar.gz && cd agent-canvas
+bash scripts/pi/install-on-pi.sh
+```
+
+**Opção B — copiar do PC** (o que você acabou de gerar no passo 1):
+
 ```bash
 scp dist-pi/agent-canvas-pi.tar.gz pi@raspberrypi.local:~/
 ssh pi@raspberrypi.local
-tar xzf agent-canvas-pi.tar.gz && cd agent-canvas
-./scripts/pi/install-on-pi.sh
+tar xzf agent-canvas-pi.tar.gz && cd agent-canvas && bash scripts/pi/install-on-pi.sh
 ```
+
+Não use `sudo` no `tar` nem no instalador (ele chama o `sudo` só onde precisa).
 
 O instalador: confere a arquitetura e a memória, instala o **Node 22** (baixa da nodejs.org e confere o SHA-256) se faltar, instala só as dependências de produção (`pnpm install --prod --frozen-lockfile`), cria o `.env`, e registra dois serviços do **systemd** (`agent-canvas-server` e `agent-canvas-web`) que sobem no boot. Ao final mostra quantos pacotes de fábrica foram instalados.
 
-Opções: `--dry-run` (só mostra), `--no-service` (você inicia na mão), `--no-node`, `--user-service` (serviços do seu usuário, necessário para notificação com tela), `--uninstall`.
+Opções (depois de `bash scripts/pi/install-on-pi.sh`): `--dry-run` (só mostra), `--no-service` (você inicia na mão), `--no-node`, `--user-service` (serviços do seu usuário, necessário para notificação com tela), `--uninstall`.
 
 Abra `http://localhost:5200` no navegador **do Pi**. Para deixar como painel: `chromium-browser --kiosk http://localhost:5200` no autostart do desktop.
 
@@ -68,7 +82,7 @@ Ou seja, o MCP `agent-canvas` roda no PC e usa o túnel. Se o Studio do PC tamb�
 
 - **Chaves de IA e conta Google**: cadastre na aba **Configurações** do Studio no Pi (ficam no `.env` do Pi, com permissão 600). Não copie o `.env` do PC sem necessidade.
 - **Login do Google**: o token fica com o servidor MCP do Google (pasta do usuário do Pi). No Pi é preciso autorizar de novo; o login redireciona para `localhost:8000`, então faça pelo navegador do próprio Pi ou com o túnel `-L 8000:localhost:8000`.
-- **Levar os dados do PC**: pare os serviços e copie `data/agent-canvas.db` (o arquivo do banco) para `data/` no Pi. **Atenção**: o padrão de fábrica só se instala com o banco **vazio**. Se você copiar o banco do PC, ele traz o que estiver lá (inclusive cópias soltas de componentes). Para começar limpo, não copie nada e use `./scripts/pi/install-on-pi.sh`.
+- **Levar os dados do PC**: pare os serviços e copie `data/agent-canvas.db` (o arquivo do banco) para `data/` no Pi. **Atenção**: o padrão de fábrica só se instala com o banco **vazio**. Se você copiar o banco do PC, ele traz o que estiver lá (inclusive cópias soltas de componentes). Para começar limpo, não copie nada e use `bash scripts/pi/install-on-pi.sh`.
 - Para reinstalar o padrão de fábrica que faltar: `node scripts/factory-restore.mjs` (não apaga nada).
 
 ## Desempenho e problemas comuns
@@ -76,4 +90,5 @@ Ou seja, o MCP `agent-canvas` roda no PC e usa o túnel. Se o Studio do PC tamb�
 - **Pouca memória**: aumente o swap para 1 GB (`CONF_SWAPSIZE=1024` em `/etc/dphys-swapfile`). Os serviços já limitam o heap do Node (256 MB o servidor, 384 MB o app web).
 - **Logs**: `journalctl -u agent-canvas-server -f` (com `--user-service`: `journalctl --user -u ...`).
 - **Reiniciar**: `sudo systemctl restart agent-canvas-server agent-canvas-web`.
-- **Atualizar**: gere um pacote novo no PC, pare os serviços, extraia por cima (o `data/` e o `.env` não fazem parte do pacote) e reinicie.
+- **Atualizar**: baixe/gere o pacote novo, pare os serviços (`sudo systemctl stop agent-canvas-web agent-canvas-server`), extraia por cima (o `data/` e o `.env` não fazem parte do pacote), rode `bash scripts/pi/install-on-pi.sh` de novo e ele reinicia tudo.
+- **Publicar uma versão nova (no PC)**: `pnpm pack:pi`, depois `gh release create vX.Y.Z dist-pi/agent-canvas-pi.tar.gz dist-pi/agent-canvas-pi.tar.gz.sha256 --title vX.Y.Z --notes "..."`.

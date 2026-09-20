@@ -34,7 +34,7 @@ Um pacote criado pelo Claude vira padrão de fábrica com `pnpm export:package <
 
 ### Raspberry Pi
 
-`pnpm pack:pi` gera um pacote já compilado e `scripts/pi/install-on-pi.sh` instala no Pi. Leia [docs/RASPBERRY-PI.md](docs/RASPBERRY-PI.md): o que roda e o que não roda em um Pi 2 (32 bits, 1 GB).
+`pnpm pack:pi` gera um pacote já compilado (também publicado como *release* no GitHub) e `bash scripts/pi/install-on-pi.sh` instala no Pi. Leia [docs/RASPBERRY-PI.md](docs/RASPBERRY-PI.md): o que roda e o que não roda em um Pi 2 (32 bits, 1 GB).
 
 ## Como o Claude constrói
 
