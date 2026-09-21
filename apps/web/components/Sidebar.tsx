@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Icon from "@/lib/icons";
+import VoiceButton from "./VoiceButton";
 import { setTheme, useTheme } from "@/lib/theme";
 import type { Canvas, Catalog } from "@/lib/api";
 import type { DashboardPage } from "@/lib/studio-api";
@@ -73,6 +74,8 @@ export default function Sidebar(props: {
   onCreate: (t: Template) => void;
   /** Abre a tela de Configuracoes (chaves de IA, Google, notificacoes). */
   onOpenSettings?: () => void;
+  /** Botão de voz flutuante: recebe o texto falado (vira um pedido para o Claude construir). */
+  onVoiceCommand?: (text: string) => void;
 }) {
   const theme = useTheme();
   const [menu, setMenu] = useState(false);
@@ -153,6 +156,7 @@ export default function Sidebar(props: {
       </div>
         </>
       )}
+      {props.onVoiceCommand && <VoiceButton onCommand={props.onVoiceCommand} />}
       <div className="side-foot">
         <div className="prov">
           {props.catalog?.providers.filter((p) => p.id !== "claude-code").map((p) => (

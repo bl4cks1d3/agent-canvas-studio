@@ -52,6 +52,11 @@ Seja honesto sobre o que **não** está coberto:
 - Agentes de IA por HTTP só usam as ferramentas marcadas no nó. As ferramentas de arquivo (`fs_*`) ficam presas à pasta `data/files/`.
 - Limites por execução: itens, chamadas a agentes e ferramentas, notificações e tempo ([ORQUESTRACAO.md](ORQUESTRACAO.md#simular-e-executar)).
 
+## Voz
+
+- **Botão de voz da barra lateral**: o reconhecimento de fala é feito pelo **navegador** (no Chrome e no Edge o áudio é enviado ao serviço de voz do fabricante). O Studio recebe só o **texto**, nunca o áudio. Como reconhecimento errado pode virar ação, o texto aparece para **conferir e editar** e só é enviado depois de uma contagem de 4 s que você pode cancelar (ou só ao clicar em *Enviar*). O pedido segue pelo mesmo caminho do *Criar com Claude*: sem Bash, arquivos ou web, sem aprovar componentes e sem executar orquestrações ao vivo.
+- **Voz no terminal (`/voice` do Claude Code)**: o áudio é capturado pelo Claude Code na **máquina do Studio** e enviado à Anthropic para transcrição (exige conta claude.ai). É ligada por `--settings` apenas nos terminais do app; `TERMINAL_VOICE=off` desativa.
+
 ## Dados
 
 - **Lixeira**: apagar um registro o guarda por 30 dias (máx. 500 por coleção). Esvaziar a lixeira é irreversível e só por pedido explícito.

@@ -17,7 +17,8 @@ Roda 100 % na sua máquina (Node + SQLite). Nada sobe para a nuvem, exceto o que
 | **Componentes** | Todos os componentes: quem criou, permissões, **aprovação**, código, **versões** e o **tema** (cor, cantos, fonte, densidade) que vale para todos. |
 | **Dados** | Coleções e registros (esquema definido em uso), com relações, lote e **lixeira** de 30 dias. |
 | **Configurações** | Chaves e modelos das IAs, conta Google, som e notificações do sistema. |
-| **Terminal** | O Claude Code dentro do app, com o MCP do Studio (``Ctrl+` ``): peça em português e veja aparecer na tela. |
+| **Terminal** | O Claude Code dentro do app, com o MCP do Studio (``Ctrl+` ``): peça em português e veja aparecer na tela. Com **voz**: toque no Espaço e fale. |
+| **Botão de voz** | O círculo flutuante da barra lateral: fale o que o Studio deve fazer e ele executa (com conferência do texto antes de enviar). |
 | **Criar com Claude** | Você descreve; o Claude Code trabalha em segundo plano e entrega coleções, componentes e páginas para você aprovar. |
 
 ## Começando

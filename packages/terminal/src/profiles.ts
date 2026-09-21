@@ -91,7 +91,30 @@ function studioMcpConfig(): string {
   return file;
 }
 
-function claudeSpec(args: string[], title: string): ProfileSpec {
+// Ditado por voz do proprio Claude Code (/voice): o microfone e o da MAQUINA onde este servico roda (o audio nao passa pelo navegador)
+// e exige conta claude.ai (nao funciona com chave de API). Vale so para os terminais do Studio, sem tocar no ~/.claude/settings.json:
+// vai por --settings. TERMINAL_VOICE = tap (padrao: toque no Espaco para gravar e toque de novo para enviar), hold (segurar o Espaco) ou
+// off (nao ativa). TERMINAL_VOICE_LANGUAGE = idioma do ditado e das respostas (padrao "pt"; vazio = nao define).
+function voiceSettingsFile(): string | null {
+  const mode = (process.env.TERMINAL_VOICE ?? "tap").trim().toLowerCase();
+  if (mode === "off" || mode === "0" || mode === "false") return null;
+  const settings: Record<string, unknown> = { voice: { enabled: true, mode: mode === "hold" ? "hold" : "tap" } };
+  const language = (process.env.TERMINAL_VOICE_LANGUAGE ?? "pt").trim();
+  if (language) settings.language = language;
+  try {
+    const file = path.join(REPO_ROOT, "data", "studio-claude-settings.json");
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, `${JSON.stringify(settings, null, 2)}\n`, "utf8");
+    return file;
+  } catch {
+    return null; // sem pasta de dados gravavel: o terminal abre igual, so sem a voz ligada
+  }
+}
+
+function claudeSpec(rawArgs: string[], title: string): ProfileSpec {
+  // --settings vai ANTES dos outros: --allowedTools aceita varios valores e engoliria o que viesse depois
+  const settings = voiceSettingsFile();
+  const args = settings ? ["--settings", settings, ...rawArgs] : rawArgs;
   const exe = findClaudeExe();
   if (exe) return { file: exe, args, cwd: claudeCwd(), title };
   if (IS_WIN) return { file: COMSPEC, args: ["/d", "/c", "claude", ...args], cwd: claudeCwd(), title };

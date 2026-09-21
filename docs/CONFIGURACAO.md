@@ -40,6 +40,8 @@ O provedor **Claude Code** (`claude-code`) não usa chave: roda `claude -p` com 
 | `TERMINAL_MAX_SESSIONS` | `8` | Máximo de sessões de terminal abertas. |
 | `TERMINAL_IDLE_HOURS` | `12` | Horas até o terminal remover uma sessão desconectada. |
 | `CLAUDE_CODE_CWD` | raiz do projeto | Pasta onde os terminais do Claude Code abrem. |
+| `TERMINAL_VOICE` | `tap` | Liga o ditado por voz (`/voice`) do Claude Code nos terminais do Studio: `tap` (toque no Espaço para gravar e toque de novo para enviar), `hold` (segure o Espaço) ou `off`. Vale só para os terminais do app (vai por `--settings`, sem mexer no seu `~/.claude/settings.json`) e exige conta claude.ai. Veja [MCP.md](MCP.md#voz). |
+| `TERMINAL_VOICE_LANGUAGE` | `pt` | Idioma do ditado **e das respostas** do Claude nesses terminais. Vazio = não define (o ditado cai para inglês). |
 
 ### Dados e comportamento
 

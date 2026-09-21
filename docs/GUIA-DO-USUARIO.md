@@ -95,6 +95,13 @@ Ele monta os dados, os componentes e a página; você vê aparecer na tela, **ap
 
 O botão **Criar com Claude** faz o mesmo em segundo plano, com uma caixa de pedido e o progresso na tela.
 
+### Falando em vez de digitar
+
+- **Botão de voz** (o círculo flutuante no canto inferior da barra lateral): clique, fale, confira o texto e ele é enviado ao **Criar com Claude** em 4 segundos (dá para editar ou cancelar antes). Precisa de Chrome ou Edge e da permissão do microfone.
+- **Voz dentro do terminal**: com o campo vazio, toque no **Espaço**, fale e toque de novo para enviar. É o ditado do próprio Claude Code, com o microfone do computador onde o Studio roda.
+
+Diferenças, requisitos e privacidade: [MCP.md](MCP.md#voz).
+
 ## Receitas
 
 **Um painel só para mim.** Abra o Dashboard, **Nova página**, peça ao Claude para colocar os componentes que você quer e use **Editar layout** para arrumar. Ligue **Tela cheia**.

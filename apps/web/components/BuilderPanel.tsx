@@ -17,7 +17,7 @@ const KIND_LABEL: Record<string, string> = { say: "Claude", tool: "ferramenta", 
  * "Criar com Claude": descreva o que quer e o Claude Code (em segundo plano, so com as ferramentas do Agent Canvas)
  * constroi dados, componentes e paginas sozinho. Os componentes dele ficam aguardando a sua aprovacao.
  */
-export default function BuilderPanel({ open, onClose, pageId, onOpenPage, onChanged }: { open: boolean; onClose: () => void; pageId: string | null; onOpenPage: (id: string) => void; onChanged: () => void }) {
+export default function BuilderPanel({ open, onClose, pageId, onOpenPage, onChanged, voiceCommand }: { open: boolean; onClose: () => void; pageId: string | null; onOpenPage: (id: string) => void; onChanged: () => void; voiceCommand?: { text: string; n: number } | null }) {
   const [prompt, setPrompt] = useState("");
   const [run, setRun] = useState<BuilderRun | null>(null);
   const [error, setError] = useState("");
@@ -55,11 +55,25 @@ export default function BuilderPanel({ open, onClose, pageId, onOpenPage, onChan
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight });
   }, [run?.events.length]);
 
-  async function start() {
+  // pedido por voz (botão flutuante da barra lateral): abre o painel e já começa
+  const lastVoice = useRef(0);
+  useEffect(() => {
+    if (!voiceCommand || voiceCommand.n === lastVoice.current) return;
+    lastVoice.current = voiceCommand.n;
+    setPrompt(voiceCommand.text);
+    if (run?.status === "running") {
+      setError("Já existe uma execução em andamento: espere terminar (ou cancele) e fale de novo. O seu pedido ficou no campo abaixo.");
+      return;
+    }
+    void start(voiceCommand.text);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voiceCommand?.n]);
+
+  async function start(text = prompt) {
     setError("");
     try {
       setApproved({});
-      setRun(await startBuild(prompt.trim(), pageId));
+      setRun(await startBuild(text.trim(), pageId));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }

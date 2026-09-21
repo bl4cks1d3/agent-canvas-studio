@@ -40,6 +40,12 @@ export default function Page() {
   const [pageId, setPageId] = useState<string | null>(null);
   const [focus, setFocus] = useState(false);
   const [builderOpen, setBuilderOpen] = useState(false);
+  const [voiceCmd, setVoiceCmd] = useState<{ text: string; n: number } | null>(null);
+  // botão de voz: o texto falado vira um pedido para o construtor (abre o painel e já executa)
+  const onVoiceCommand = (text: string) => {
+    setBuilderOpen(true);
+    setVoiceCmd((prev) => ({ text, n: (prev?.n ?? 0) + 1 }));
+  };
   const tokens = useStudioTheme();
   useEffect(() => {
     const root = document.documentElement.style;
@@ -232,7 +238,7 @@ export default function Page() {
 
   return (
     <div className={`app${focus ? " focus" : ""}`}>
-      <Sidebar mode={view === "canvas" ? "canvas" : "dashboard"} pages={pages.data} activePageId={pageId} onPickPage={(id) => (setPageId(id), setView("dashboard"))} onCreatePage={() => void newPage()} onDeletePage={(pg) => void removePage(pg)} onMovePage={(id, d) => void movePage(id, d)} list={list} online={online} activeId={activeId} catalog={catalog} onPick={(id) => (setActiveId(id), setView("canvas"))} onCreate={(t) => void create(t)} onOpenSettings={() => setView("settings")} />
+      <Sidebar mode={view === "canvas" ? "canvas" : "dashboard"} pages={pages.data} activePageId={pageId} onPickPage={(id) => (setPageId(id), setView("dashboard"))} onCreatePage={() => void newPage()} onDeletePage={(pg) => void removePage(pg)} onMovePage={(id, d) => void movePage(id, d)} list={list} online={online} activeId={activeId} catalog={catalog} onPick={(id) => (setActiveId(id), setView("canvas"))} onCreate={(t) => void create(t)} onOpenSettings={() => setView("settings")} onVoiceCommand={onVoiceCommand} />
       <main className="main">
         <div className="tabs">
           {VIEWS.map((v) => (
@@ -339,6 +345,7 @@ export default function Page() {
       <BuilderPanel
         open={builderOpen}
         onClose={() => setBuilderOpen(false)}
+        voiceCommand={voiceCmd}
         pageId={view === "dashboard" ? pageId : null}
         onOpenPage={(id) => {
           void pages.refresh().then(() => {

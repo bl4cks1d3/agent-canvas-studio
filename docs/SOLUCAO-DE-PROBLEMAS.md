@@ -43,6 +43,20 @@ Se não responde, o app mostra *“O servidor não responde”* na barra lateral
 | *“muitas execuções ao mesmo tempo”* / *“já está executando”* | No máximo 3 execuções simultâneas e uma por canvas |
 | Um nó `agent.claude` recusa `Bash` | `Bash` só com `CLAUDE_NODE_ALLOW_BASH=true` no `.env` |
 
+## Voz
+
+| Sintoma | Causa e solução |
+|---|---|
+| O círculo de voz está cinza / *“Este navegador não tem reconhecimento de voz”* | Use o **Chrome** ou o **Edge** (o Firefox não tem a Web Speech API). O navegador embutido de alguns apps também não tem |
+| *“O microfone está bloqueado”* | Permita o microfone para `localhost:5200` (cadeado na barra de endereço) e, no Windows, em *Configurações → Privacidade e segurança → Microfone* |
+| *“O reconhecimento de voz … precisa de internet”* | O Chrome/Edge enviam o áudio ao serviço de voz deles: precisa de conexão (e sem VPN/proxy que bloqueie) |
+| *“Não ouvi nada”* | Fale logo depois de clicar; confira o microfone padrão do sistema e o volume de entrada |
+| *“Já existe uma execução em andamento”* | O construtor faz um pedido por vez. Espere terminar (ou cancele no painel) e envie de novo: o texto fica no campo |
+| Nada acontece ao tocar no Espaço **no terminal** | Confirme que o rodapé mostra `hold space to speak` (senão o serviço de terminal é antigo: reinicie o `pnpm dev` e abra uma sessão nova; ou rode `/voice` na sessão). O campo precisa estar **vazio** no modo `tap` |
+| `Voice mode requires a Claude.ai account` | O Claude Code está com chave de API ou Bedrock/Vertex: faça `/login` com a conta claude.ai |
+| `Microphone access is denied` / `No audio detected` no terminal | Esse microfone é o da **máquina do Studio**. Ative-o em *Privacidade → Microfone → aplicativos da área de trabalho* e escolha o dispositivo de entrada padrão do sistema |
+| A voz do terminal não funciona abrindo o Studio de outro computador | Esperado: o áudio é capturado onde o servidor roda. Use o botão de voz da barra lateral (microfone do navegador) |
+
 ## Componentes
 
 | Sintoma | Causa e solução |

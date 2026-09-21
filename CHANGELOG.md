@@ -13,6 +13,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). 
 - **Lembretes ligados a registros.** `depois_de` em `sistema_lembretes`: o intervalo passa a contar do registro mais recente de uma coleção. O lembrete de água agora espera depois do último copo registrado.
 - **Google como dados.** `google_tasks_list`, `google_task_set`, `google_task_create`, `google_events_list` e `google_calendars_list` devolvem JSON (no MCP: `google_tasks`, `google_task_set`, `google_events`, `google_calendars`), em vez de texto para interpretar.
 - **Sincronização de tarefas com o Google Tasks.** `rotina_tarefas` ↔ Google Tasks: vincula a mesma tarefa por título (sem duplicar), replica concluir/reabrir nos dois sentidos, importa e exporta tarefas abertas e nunca apaga. Manual (`POST /sync/google-tasks`, `sync_google_tasks`) ou automática (desligada por padrão).
+- **Voz.** Botão circular flutuante na barra lateral: fale, confira o texto (editável, com envio automático em 4 s que dá para cancelar) e o pedido vai para o *Criar com Claude*. Nos terminais do app, o ditado `/voice` do Claude Code já vem ligado (`TERMINAL_VOICE`, `TERMINAL_VOICE_LANGUAGE`).
 - **Favicon** do projeto (`icon.svg`, `favicon.ico`, `apple-icon.png`).
 - **Documentação completa** em `docs/` e **licença MIT**.
 

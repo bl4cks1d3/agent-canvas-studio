@@ -21,6 +21,38 @@ Também há o botão **Criar com Claude** (o *construtor*): roda o Claude Code e
 
 O serviço de terminal (`packages/terminal`, porta 5300) usa `node-pty`. As sessões **vivem no servidor**: recarregar a página só desconecta o WebSocket; o processo continua e o histórico recente (256 KB) é reanexado. Até 8 sessões (`TERMINAL_MAX_SESSIONS`); sessões desconectadas são removidas após 12 h (`TERMINAL_IDLE_HOURS`) e as encerradas após 1 h. Só aceita conexões de `127.0.0.1` com `Origin` e `Host` conhecidos ([SEGURANCA.md](SEGURANCA.md)). O navegador só escolhe o **nome** do perfil; o comando, os argumentos e a pasta saem do servidor: nenhum texto do navegador vira comando.
 
+## Voz
+
+Há duas formas de controlar o Studio falando. Escolha a que combina com o momento.
+
+### 1. Botão de voz (círculo flutuante na barra lateral)
+
+Um botão redondo no canto inferior da barra lateral, visível em todas as abas.
+
+1. **Clique** no círculo (ele fica vermelho e pulsa) e fale o que o Studio deve fazer: *“crie uma página de gastos com categoria e valor”*.
+2. Clique de novo (ou em **Terminei**) para parar. O texto aparece para você **conferir e editar**.
+3. Ele é **enviado sozinho em 4 segundos** (desmarque *Enviar sozinho* para enviar só no clique). Mexer no texto pausa a contagem; **Cancelar** descarta; **Regravar** fala de novo.
+4. O texto abre o painel **Criar com Claude** e começa a execução na hora: o Claude Code trabalha em segundo plano só com as ferramentas do Studio e, no fim, os componentes novos esperam a sua aprovação.
+
+Como funciona e o que esperar:
+
+- **Requisitos:** Chrome ou Edge (o Firefox não tem reconhecimento de voz) e a permissão do microfone para `localhost:5200`. O idioma é português do Brasil.
+- **Privacidade:** o reconhecimento é do **navegador**; no Chrome e no Edge o áudio vai para o serviço de voz deles. O Studio só recebe o **texto**.
+- **Cada fala é um pedido independente** (o construtor não lembra o anterior) e **um por vez**: se houver uma execução em andamento, o botão avisa e deixa o texto no campo para você enviar depois.
+- Como no *Criar com Claude*, roda **sem Bash, arquivos ou web**, não aprova componentes e não executa orquestrações ao vivo. Para conversar de ida e volta (perguntas, ajustes finos, confirmar exclusões) use o terminal, abaixo.
+
+### 2. Ditado por voz do Claude Code, dentro do terminal
+
+O Claude Code tem voz própria (`/voice`). Nos terminais do app (perfis *controlar o Studio*, *montar canvases* e *Claude Code*) ela já vem **ligada**: no rodapé aparece a dica `hold space to speak`.
+
+- **Modo padrão `tap`:** com o campo de texto vazio, **toque no Espaço** para começar a gravar e **toque de novo** para enviar (envia sozinho se tiver 3 palavras ou mais). É o mais confiável no navegador, porque não depende da repetição de teclas. Prefere segurar? `TERMINAL_VOICE=hold`. Não quer voz? `TERMINAL_VOICE=off`.
+- O idioma do ditado é `pt` (`TERMINAL_VOICE_LANGUAGE`); o Claude passa a responder em português nesses terminais.
+- Ligado por `--settings` **só nesses terminais**: o seu `~/.claude/settings.json` não é alterado. Depois de mudar `TERMINAL_VOICE`, **reinicie o serviço de terminal** (`pnpm dev`) e abra uma sessão nova.
+- **O microfone é o da máquina onde o Studio roda**, não o do navegador: o áudio é capturado pelo próprio Claude Code e enviado à Anthropic para transcrição (não gasta tokens). Não funciona se você abre o Studio de **outro computador** (túnel SSH) nem em sessões na nuvem.
+- Exige **conta claude.ai** (`/login`); não funciona com chave de API nem com Bedrock/Vertex. No Windows, ative *Configurações → Privacidade e segurança → Microfone → Permitir que aplicativos da área de trabalho acessem o microfone*.
+
+Mais detalhes na [documentação do Claude Code](https://code.claude.com/docs/en/voice-dictation).
+
 ## Regras que o Claude segue no modo Studio
 
 - Componentes que ele cria **ficam aguardando a sua aprovação**; ele nunca aprova.
